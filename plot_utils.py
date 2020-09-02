@@ -15,7 +15,7 @@ if fig_defaults == 'paper':
     ####### paper figure defaults
     label_fontsize = 8 # pt
     plot_linewidth = 0.5 # pt
-    linewidth = 1.0#0.5
+    linewidth = 0.5
     axes_linewidth = 0.5
     marker_size = 3.0 # markersize=<...>
     cap_size = 2.0 # for errorbar caps, capsize=<...>

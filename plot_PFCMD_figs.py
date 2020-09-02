@@ -7,8 +7,8 @@ import sys,shelve
 import plot_utils as pltu
 
 def plot_axes(axs,MDstr,xorStr):
-    RNGs = ('0','1','2','3','4','5','6','7','8','9')
-    #RNGs = ('0',)
+    # RNGs = ('0','1','2','3','4','5','6','7','8','9')
+    RNGs = ('0',)
     Ntrain = 1000
     Nsub = 200
     Nneur = 1000
@@ -151,4 +151,6 @@ if __name__ == "__main__":
         plot_axes((ax1,ax2,ax3),MDstr,xorStr)
     fig.tight_layout()
     fig.savefig('fig_paper'+xorStr+'.eps', format='eps',
+                dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+    fig.savefig('fig_paper'+xorStr+'.jpg', format='jpg',
                 dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
