@@ -14,6 +14,10 @@ from plot_figures import *
 import torch
 cuda = True
 
+# device = 'cuda:1'  # 1090 Ti
+device = 'cuda:0'  # TITAN GTX
+torch.cuda.current_device()
+
 class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False):
@@ -989,57 +993,58 @@ class PFCMD():
             self.fileDict['wDir'] = self.wDir
 
 if __name__ == "__main__":
-    #PFC_G = 1.6                    # if not positiveRates
-    PFC_G = 6.
-    PFC_G_off = 1.5
-    learning_rate = 5e-6
-    learning_cycles_per_task = 1000
-    Ntest = 20
-    Nblock = 70
-    noiseSD = 1e-3
-    tauError = 0.001
-    reLoadWeights = False
-    saveData = False #not reLoadWeights
-    plotFigs = True#not saveData
-    pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
-                    noiseSD,tauError,plotFigs=plotFigs,saveData=saveData)
-    if not reLoadWeights:
-        t = time.perf_counter()
-        pfcmd.train(learning_cycles_per_task)
-        print('training_time', (time.perf_counter() - t)/60, ' minutes')
+    with torch.cuda.device(0):
+        #PFC_G = 1.6                    # if not positiveRates
+        PFC_G = 6.
+        PFC_G_off = 1.5
+        learning_rate = 5e-6
+        learning_cycles_per_task = 1000
+        Ntest = 20
+        Nblock = 70
+        noiseSD = 1e-3
+        tauError = 0.001
+        reLoadWeights = False
+        saveData = False #not reLoadWeights
+        plotFigs = True#not saveData
+        pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
+                        noiseSD,tauError,plotFigs=plotFigs,saveData=saveData)
+        if not reLoadWeights:
+            t = time.perf_counter()
+            pfcmd.train(learning_cycles_per_task)
+            print('training_time', (time.perf_counter() - t)/60, ' minutes')
 
-        if saveData:
-            pfcmd.save()
-        # save weights right after training,
-        #  since test() keeps training on during MD off etc.
-        pfcmd.test(Ntest)
-        print('total_time', (time.perf_counter() - t)/60, ' minutes')
-    else:
-        pfcmd.load(filename)
-        # all 4cues in a block
-        pfcmd.test(Ntest)
-        
-        #pfcmd.taskSwitch2(Nblock)
-        
-        # task switch
-        #pfcmd.taskSwitch3(Nblock,MDoff=True)
-        
-        # control experiment: task switch without turning MD off
-        # also has 2 cues in a block, instead of 4 as in test()
-        #pfcmd.taskSwitch3(Nblock,MDoff=False)
-    figs = list(map(plt.figure, plt.get_fignums()))
-    current_sizes = [(fi.canvas.height(), fi.canvas.width()) for fi in figs] #list of tuples height, width
-    from data_generator import move_figure
-    # move_figure(figs[0],col=4, position='bottom')
-    # move_figure(figs[1],col=2, position='top')
-    # move_figure(figs[2],col=0, position='bottom')
-    # move_figure(figs[3],col=4, position='top')
-    # move_figure(figs[4],col=3, position='bottom')
-    # move_figure(figs[6],col=4, position='top')
+            if saveData:
+                pfcmd.save()
+            # save weights right after training,
+            #  since test() keeps training on during MD off etc.
+            pfcmd.test(Ntest)
+            print('total_time', (time.perf_counter() - t)/60, ' minutes')
+        else:
+            pfcmd.load(filename)
+            # all 4cues in a block
+            pfcmd.test(Ntest)
+            
+            #pfcmd.taskSwitch2(Nblock)
+            
+            # task switch
+            #pfcmd.taskSwitch3(Nblock,MDoff=True)
+            
+            # control experiment: task switch without turning MD off
+            # also has 2 cues in a block, instead of 4 as in test()
+            #pfcmd.taskSwitch3(Nblock,MDoff=False)
+        figs = list(map(plt.figure, plt.get_fignums()))
+        current_sizes = [(fi.canvas.height(), fi.canvas.width()) for fi in figs] #list of tuples height, width
+        from data_generator import move_figure
+        # move_figure(figs[0],col=4, position='bottom')
+        # move_figure(figs[1],col=2, position='top')
+        # move_figure(figs[2],col=0, position='bottom')
+        # move_figure(figs[3],col=4, position='top')
+        # move_figure(figs[4],col=3, position='bottom')
+        # move_figure(figs[6],col=4, position='top')
 
-    if pfcmd.saveData:
-        pfcmd.fileDict.close()
-    
-    plt.show()
-    gibberish
-    # plt.close('all')
+        if pfcmd.saveData:
+            pfcmd.fileDict.close()
+        
+        plt.show()
+        
+        # plt.close('all')
