@@ -51,7 +51,7 @@ def move_figure(figh, col=1, position="top"):
     px = mgr.canvas.width()
 
     d = 10  # width of the window border in pixels
-    num_of_cols = 6
+    num_of_cols            = 6
     w_col = (px//num_of_cols) + d*2
 
     top = (d*4)

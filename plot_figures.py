@@ -28,7 +28,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     # these tensors are  training_i x tsteps x no_neuron 
     p = pfcmd.Nsub
     Ntrain = PFCrates[:,:, :5].shape[0]
-    yticks = (0,1)
+    yticks = (0, 0.5,1)
     xticks = [0, 1000, 2000]
     pfcmd.figRates, axes = plt.subplots(4,3)#, sharex=True)# , sharey=True)
     pfcmd.figRates.set_size_inches([9,7])
@@ -37,53 +37,53 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.plot(range(Ntrain),np.mean( PFCrates[:,:,:5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','Mean FR')
-    ax.set_title('PFC A')
+    ax.set_title('PFC Cue 1')
     
     ax = axes[0,1]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p:p+5], axis=1), '.', markersize =0.5)
-    pltu.beautify_plot(ax,x0min=False,y0min=False)
+    pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','')
-    ax.set_title('PFC B')
+    ax.set_title('PFC Cue 2')
 
     ax = axes[0,2]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p*2:p*2+5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False)
     pltu.axes_labels(ax,'','')
-    ax.set_title('PFC C')
+    ax.set_title('PFC Cue 3')
 
     ax = axes[1,0]
     ax.plot(range(Ntrain),np.mean( MDrates[:,:,0], axis=1), '.', markersize =0.5)
-    pltu.beautify_plot(ax,x0min=False,y0min=False)
+    pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','mean FR')
     ax.set_title('MD 0')
     
     ax = axes[1,1]
     ax.plot(range(Ntrain),np.mean( MDrates[:,:,1], axis=1), '.', markersize =0.5)
-    pltu.beautify_plot(ax,x0min=False,y0min=False)
+    pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('MD 1')
     
     ax = axes[1,2]
     ax.plot(range(Ntrain),np.mean( MDinputs[:, :,:], axis=1), '.', markersize =0.5)
-    pltu.beautify_plot(ax,x0min=False,y0min=False)
+    pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('MD avg inputs')
     
     ax = axes[2,0]
     ax.plot(range(Ntrain),np.mean( Outrates[:,:,0], axis=1), '.', markersize =0.5)
-    pltu.beautify_plot(ax,x0min=False,y0min=False)
+    pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','mean FR')
     ax.set_title('Out 0')
     
     ax = axes[2,1]
     ax.plot(range(Ntrain),np.mean( Outrates[:,:,1], axis=1), '.', markersize =0.5)
-    pltu.beautify_plot(ax,x0min=False,y0min=False)
+    pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('Out 1')
     
     ax = axes[2,2]
     ax.plot(range(Ntrain),np.mean( Outrates[:, :,:], axis=1), '.', markersize =0.5)
-    pltu.beautify_plot(ax,x0min=False,y0min=False)
+    pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('Out 0 and 1')
 
@@ -91,7 +91,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     # Plot MSE
     ax.plot(MSEs)
     ax.plot(smooth(MSEs, 8), 'tab:orange', linewidth= pltu.linewidth)
-    pltu.beautify_plot(ax,x0min=False,y0min=False)
+    pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
     pltu.axes_labels(ax,'Trials','MSE')
     ax.set_title('MSE')
 
@@ -163,38 +163,38 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
 
 def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)', 'wCto0(r) wCto1(b)']):
     wOuts, wPFC2MDs, wMD2PFCs, wMD2PFCMults, wJrecs, MDpreTraces = weights
-
+    xticks = [0, 1000, 2000]
     # plot output weights evolution
     pfcmd.fig3, axes = plt.subplots(4,3)#, sharex=True) #, sharey=True)
     # pfcmd.fig3.set_figheight = pltu.twocolumnwidth
     # pfcmd.fig3.set_figwidth = pltu.twocolumnwidth
     pfcmd.fig3.set_size_inches([9,7])
     p = pfcmd.Nsub
-    for pi, PFC in enumerate(['A', 'B', 'C']):
+    for pi, PFC in enumerate(['PFC cue 1', 'PFC cue 2', 'PFC cue 3']):
         ax = axes[0,pi]
         ax.plot(wOuts[:,0, p*pi:p*pi+5],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wOuts[:,1, p*pi:p*pi+5],'tab:blue', linewidth= pltu.linewidth)
-        pltu.beautify_plot(ax,x0min=False,y0min=False)
-        if pi == 0: pltu.axes_labels(ax,'','w to Out-0(r) 1(b)')
+        pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
+        if pi == 0: pltu.axes_labels(ax,'','to Out-0 & 1 (r,b)')
         ax.set_title(PFC)
 
-    for pi, PFC in enumerate(['A', 'B', 'C']):
+    for pi, PFC in enumerate(['PFC cue 1', 'PFC cue 2', 'PFC cue 3']):
         ax = axes[1,pi]
         ax.plot(wPFC2MDs[:,0, p*pi:p*pi+5],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wPFC2MDs[:,1, p*pi:p*pi+5],'tab:blue', linewidth= pltu.linewidth)
-        pltu.beautify_plot(ax,x0min=False,y0min=False)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to MD-0(r) 1(b)')
 
         ax = axes[2,pi]
         ax.plot(wMD2PFCs[:,p*pi:p*pi+5, 0],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wMD2PFCs[:,p*pi:p*pi+5, 1],'tab:blue', linewidth= pltu.linewidth)
-        pltu.beautify_plot(ax,x0min=False,y0min=False)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','from MD-0(r) 1(b)')
 
         # plot PFC to MD pre Traces
         ax = axes[3,pi]
         ax.plot(MDpreTraces[:,p*pi:p*pi+5], linewidth = pltu.linewidth)
-        pltu.beautify_plot(ax,x0min=False,y0min=False)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         pltu.axes_labels(ax,'Trials','pre')
 
 
@@ -253,4 +253,4 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         pltu.beautify_plot(axes[3,1],x0min=False,y0min=False)
         pltu.axes_labels(axes[3,1],'Trials','Mw MD1toA(r) 1->C (b)')
 
-        pfcmd.fig3.tight_layout()
+    pfcmd.fig3.tight_layout()
