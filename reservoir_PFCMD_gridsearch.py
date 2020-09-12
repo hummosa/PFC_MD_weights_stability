@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# (c) May 2018 Aditya Gilra, EPFL.
+# (c) May 2018 Aditya Gilra, EPFL. 
+# Ali and Siwei modified
 
 """Some reservoir tweaks are inspired by Nicola and Clopath, arxiv, 2016 and Miconi 2016."""
 import os
