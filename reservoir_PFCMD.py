@@ -16,6 +16,7 @@ from plot_figures import *
 class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False):
+        self.debug = False
         self.RNGSEED = 1
         np.random.seed([self.RNGSEED])
 
@@ -71,6 +72,7 @@ class PFCMD():
                                             # -1 for zero recurrent weights
         self.wInSpread = False              # Spread wIn also into other cue neurons to see if MD disjoints representations
         self.blockTrain = True              # first half of training is context1, second half is context2
+        self.blockTrain = False # use different levels of association for multiple blocks training
         
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017
         self.MDreinforce = True            #  instead of error-driven learning
@@ -158,6 +160,8 @@ class PFCMD():
             self.wMD2PFC = np.random.normal(size=(self.Nneur, self.Nmd))\
                             *self.G/np.sqrt(self.Nsub*2)
             self.wMD2PFC -= np.mean(self.wMD2PFC,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
+            self.initial_norm_wPFC2MD = np.linalg.norm(self.wPFC2MD)
+            self.initial_norm_wMD2PFC = np.linalg.norm(self.wMD2PFC)
 
         self.MDpreTrace = np.zeros(shape=(self.Nneur))
 
@@ -330,10 +334,11 @@ class PFCMD():
                     #  but syn plasticity just uses pre*post, but not actualy synaptic flow.
                     self.MDpreTrace += 1./self.tsteps/10. * \
                                         ( -self.MDpreTrace + rout )
+                    # wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
                     wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
                     MDrange = 0.06
-                    MDweightdecay = 0.997
+                    MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
                     # self.wMD2PFCMult = np.clip(self.wMD2PFCMult+wPFC2MDdelta.T,0.,7./self.G) # ali removed all mult weights
@@ -470,6 +475,9 @@ class PFCMD():
                 #synaptic competition both ways.
                 self.wMD2PFC = MDweightdecay* (self.wMD2PFC)
                 self.wPFC2MD = MDweightdecay* (self.wPFC2MD)
+                self.wPFC2MD /= np.linalg.norm(self.wPFC2MD)/ self.initial_norm_wPFC2MD
+                self.wMD2PFC /= np.linalg.norm(self.wMD2PFC)/ self.initial_norm_wMD2PFC
+
                 # self.wMD2PFC -= np.mean(self.wMD2PFC)
                 # self.wMD2PFC *= self.G/np.sqrt(self.Nsub*2)/np.std(self.wMD2PFC) # div weights by their std to get normalized dist, then mul it by desired std
                 # self.wPFC2MD -= np.mean(self.wPFC2MD)
@@ -742,8 +750,9 @@ class PFCMD():
             taski,cuei = cues_order[0] # No need for this loop, just pick the first cue, this list is ordered randomly
             cue, target = \
                 self.get_cue_target(taski,cuei)
-            print('cue:', cue)
-            print('target:', target)
+            if self.debug = True:
+                print('cue:', cue)
+                print('target:', target)
             cues, routs, outs, MDouts, MDinps, errors = \
                 self.sim_cue(taski,cuei,cue,target,MDeffect=MDeffect,
                 train=True)
