@@ -49,14 +49,14 @@ def compute_optimal_bayesian_coupled_observer(cue, target):
     targetdata=np.zeros(shape=(500,1))
     diff_obs=np.zeros(shape=(500, 1))
     for i in range(500):
-       if target[i]==0:
-        targetdata[i]=cue[i]
-       if target[i]==1:
-        targetdata[i]=1-cue[i]
-       if cue[i]>=targetdata[i]:
-        diff_obs[i] = cue[i] - targetdata[i]
-       if cue[i]<targetdata[i]:
-        diff_obs[i] = targetdata[i] - cue[i]
+#       if target[i]==0:
+#        targetdata[i]=cue[i]
+#       if target[i]==1:
+#        targetdata[i]=1-cue[i]
+       if cue[i]>=target[i]:
+        diff_obs[i] = cue[i] - target[i]
+       if cue[i]<target[i]:
+        diff_obs[i] = target[i] - cue[i]
     # reshape to (number of non-blank dts, 1)
     # diff_obs = np.expand_dims(diff_obs.values, axis=1)
     observations.observe(diff_obs)
@@ -127,10 +127,10 @@ def compute_optimal_bayesian_observer_block_side(cue, target):
     #for i in range(500):
     #   print(cue[i],target[i])
     for i in range(500):
-       if target[i]==0:
+       if target[i]==1:
           diff_obs[i,0] = 1 
           diff_obs[i,1] = 0 
-       if target[i]==1:
+       if target[i]!=1:
           diff_obs[i,0] = 0 
           diff_obs[i,1] = 1 
     #trial_sides = ((1 + trial_end_data.trial_side.values) / 2).astype(np.int)
