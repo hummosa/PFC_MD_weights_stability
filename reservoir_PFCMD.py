@@ -59,6 +59,16 @@ class PFCMD():
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
         #self.MDEffectType = 'divmult'       # MD divides from across tasks and multiplies within task
 
+        # OFC
+        self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
+        if self.OFC_reward_hx:
+            self.current_context_belief = 0 # Which context is the network assuming currently
+            self.pcontext = np.ones(self.Ncontexts)/ self.Ncontexts  # prob of being in each context.
+            self.recent_error = np.zeros(self.Ncontexts)           # Recent reward accumulator for each context
+            self.recent_error_history = []  # List to keep track of entire error history
+            self.decayRewardPerTrial = 0.1 # NOT in use yet  # how to decay the mean reward by, per trial
+            self.use_context_belief =False  # input routing per current context or per context belief
+        self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
                                             #  (i.e. weights to and fro (outFB) are not MD modulated)
@@ -87,7 +97,7 @@ class PFCMD():
             self.perturbProb = 50./self.tsteps
                                             # probability of perturbation of each output neuron per time step
             self.perturbAmpl = 10.          # how much to perturb the output by
-            self.meanErrors = np.zeros(self.Ncontexts*self.inpsPerContext)
+            self.meanErrors = np.zeros(self.Ncontexts)#*self.inpsPerContext) #Ali made errors per context rather than per context*cue
                                             # vector holding running mean error for each cue
             self.decayErrorPerTrial = 0.1   # how to decay the mean errorEnd by, per trial
             self.learning_rate *= 10        # increase learning rate for reinforce
@@ -98,6 +108,7 @@ class PFCMD():
         self.depress = False                # a depressive term if there is pre-post firing
         self.multiAttractorReservoir = False# increase the reservoir weights within each cue
                                             #  all uniformly (could also try Hopfield style for the cue pattern)
+        self.monitor = monitor(['context_belief', 'error_cxt1', 'error_cxt2', 'error_dif']) #monior class to track vars of interest
         if self.outExternal:
             self.wOutMask = np.ones(shape=(self.Nout,self.Nneur))
             #self.wOutMask[ np.random.uniform( \
@@ -365,7 +376,7 @@ class PFCMD():
                     # wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
                     wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
-                    MDrange = 0.06
+                    MDrange = 0.1#0.06
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
@@ -485,7 +496,8 @@ class PFCMD():
                             self.wDir -= 10*self.learning_rate \
                                         * np.outer(out,cue)*self.wDir
 
-        inpi = contexti*self.inpsPerContext + cuei
+        # inpi = contexti*self.inpsPerContext + cuei
+        inpi = contexti
         if train and self.reinforce:
             # with learning using REINFORCE / node perturbation (Miconi 2017),
             #  the weights are only changed once, at the end of the trial
@@ -493,7 +505,11 @@ class PFCMD():
             #  the extra factor baseline_err helps to stabilize learning
             #   as per Miconi 2017's code,
             #  but I found that it destabilized learning, so not using it.
-            errorEnd = np.mean(errors*errors)
+            if self.delayed_response:
+                errorEnd = np.mean(errors[-50:]*errors[-50:]) 
+            else:
+                errorEnd = np.mean(errors*errors) # errors is [tsteps x Nout]
+
             if self.outExternal:
                 self.wOut -= self.learning_rate * \
                         (errorEnd-self.meanErrors[inpi]) * \
@@ -543,13 +559,26 @@ class PFCMD():
 
             # cue-specific mean error (low-pass over many trials)
             self.meanErrors[inpi] = \
-                self.decayErrorPerTrial * self.meanErrors[inpi] + \
-                (1.0 - self.decayErrorPerTrial) * errorEnd
+                (1.0 - self.decayErrorPerTrial) * self.meanErrors[inpi] + \
+                 self.decayErrorPerTrial * errorEnd
+            # self.recent_error[self.current_context_belief] = self.meanErrors[inpi]
+            if self.use_context_belief:
+            #     self.recent_error[self.current_context_belief] =(1.0 - self.decayErrorPerTrial) * self.recent_error[self.current_context_belief] + \
+            #      self.decayErrorPerTrial * self.meanErrors[inpi]
+            # else:
+                self.recent_error[inpi] = self.meanErrors[inpi] # TODO temporarily not using context belief
 
         if train and self.outExternal:
             self.wOut *= self.wOutMask
         
         self.meanAct[inpi,:,:] += routs
+
+        # TODO Flip belief about context if recent errors differ more than a threshold:
+        dif_err = np.abs(self.recent_error[0]-self.recent_error[1])
+        if dif_err > 0.2:
+            self.current_context_belief = np.argmin(self.recent_error)
+
+        self.monitor.log([self.current_context_belief, self.recent_error[0], self.recent_error[1], dif_err])    
 
         return cues, routs, outs, MDouts, MDinps, errors
 
@@ -587,10 +616,13 @@ class PFCMD():
                 targeti = cuei 
             
             if self.modular:
-                cue[inpBase+cuei] = 1. # Pass cue to the first PFC region 
+                if self.use_context_belief:
+                    cue[self.current_context_belief*2+cuei] = 1. # Pass cue according to context belief 
+                else:
+                    cue[inpBase+cuei] = 1. # Pass cue to the first PFC region 
             else:
                 cue[inpBase+cuei] = 1. # Pass cue to the first PFC region 
-                cue[cuei] = 1.         # Pass cue to the second PFC region
+                cue[cuei if inpBase==2 else cuei+2] = 1.         # Pass cue to the second PFC region
             
             target = np.array((1.,0.)) if targeti==0  else np.array((0.,1.))
         
@@ -809,6 +841,7 @@ class PFCMD():
                 cueList = self.get_cue_list(contexti)
             else:
                 blocki = traini // (learning_cycles_per_task )
+                # USE context beliefe
                 contexti = self.training_schedule(blocki)# Get the context index for this current block
                 cueList = self.get_cue_list(contexti=contexti) # Get all the possible cue combinations for the current context
             cues_order = self.get_cues_order(cueList) # randomly permute them. 
@@ -1055,6 +1088,8 @@ if __name__ == "__main__":
         if pfcmd.debug:
             pfcmd.test(Ntest) # Ali turned test off for now, takes time, and unclear what it tests. but good to keep monitering neuronal responses within trials.
         print('total_time', (time.perf_counter() - t)/60, ' minutes')
+        pfcmd.fig_monitor = plt.figure()
+        pfcmd.monitor.plot(pfcmd.fig_monitor, pfcmd)
     else:
         pfcmd.load(filename)
         # all 4cues in a block
