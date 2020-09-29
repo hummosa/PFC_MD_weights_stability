@@ -68,7 +68,7 @@ class PFCMD():
             self.recent_error_history = []  # List to keep track of entire error history
             self.decayRewardPerTrial = 0.1 # NOT in use yet  # how to decay the mean reward by, per trial
             self.use_context_belief =False  # input routing per current context or per context belief
-        self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
+        self.delayed_response = 50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
                                             #  (i.e. weights to and fro (outFB) are not MD modulated)
@@ -88,7 +88,7 @@ class PFCMD():
                                             # -1 for zero recurrent weights
         self.wInSpread = False              # Spread wIn also into other cue neurons to see if MD disjoints representations
         self.blockTrain = True              # first half of training is context1, second half is context2
-        self.blockTrain = False # use different levels of association for multiple blocks training
+        # self.blockTrain = False # use different levels of association for multiple blocks training
         
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017
         self.MDreinforce = True            #  instead of error-driven learning
@@ -125,6 +125,7 @@ class PFCMD():
         if self.MDEffectType == 'submult':
             # working!
             Gbase = 0.75                      # determines also the cross-task recurrence
+            self.MDamplification = 10. #0.5
             if self.MDstrength is None: MDval = 1.
             elif self.MDstrength < 0.: MDval = 0.
             else: MDval = self.MDstrength
@@ -380,7 +381,7 @@ class PFCMD():
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
-                    self.wMD2PFCMult = np.clip(self.wMD2PFC,0., 0.5 /self.G) 
+                    self.wMD2PFCMult = np.clip(self.wMD2PFC,0., self.MDamplification /self.G) 
             else:
                 if cuda:
                     with torch.no_grad():  
@@ -506,12 +507,12 @@ class PFCMD():
             #   as per Miconi 2017's code,
             #  but I found that it destabilized learning, so not using it.
             if self.delayed_response:
-                errorEnd = np.mean(errors[-50:]*errors[-50:]) 
+                errorEnd = np.mean(errors[-self.delayed_response:]*errors[-self.delayed_response:]) 
             else:
                 errorEnd = np.mean(errors*errors) # errors is [tsteps x Nout]
 
             if self.outExternal:
-                self.wOut -= self.learning_rate * \
+                self.wOut -= 1/1000 * self.learning_rate * \
                         (errorEnd-self.meanErrors[inpi]) * \
                             HebbTrace #* self.meanErrors[inpi]
             else:
@@ -1066,7 +1067,6 @@ if __name__ == "__main__":
     PFC_G = 6.
     PFC_G_off = 1.5
     learning_rate = 5e-6
-    learning_cycles_per_task = 600
     Ntest = 20
     Nblock = 70
     noiseSD = 1e-3
@@ -1076,6 +1076,10 @@ if __name__ == "__main__":
     plotFigs = True#not saveData
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData)
+    if pfcmd.blockTrain:
+        learning_cycles_per_task = 600
+    else:
+        learning_cycles_per_task = 400
     if not reLoadWeights:
         t = time.perf_counter()
         pfcmd.train(learning_cycles_per_task)
