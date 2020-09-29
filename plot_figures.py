@@ -2,6 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plot_utils as pltu
 
+def running_mean(x, N):
+    cumsum = np.cumsum(np.insert(x, 0, 0)) 
+    return (cumsum[N:] - cumsum[:-N]) / float(N)
+
 def smooth(y, box_pts):
     box = np.ones(box_pts)/box_pts
     y_smooth = np.convolve(y, box, mode='same')
@@ -108,11 +112,15 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     # ax = pfcmd.figOuts.add_subplot(312)
     # ax.plot(smooth((Targets[:,0] == out_higher_mean)*1., 20), linewidth=pltu.linewidth)
     # pltu.axes_labels(ax, 'Trials', '% Correct')
-    out_higher_mean = 1.*( np.mean( Outrates[:, :,0], axis=1) > np.mean( Outrates[:, :,1], axis=1) )
-    out_higher_endFR =1.*( Outrates[:, -1 ,0] >  Outrates[:, -1 ,1]                                )
+    
+    if pfcmd.delayed_response:
+        out_higher_mean = 1.*( np.mean( Outrates[:, -pfcmd.delayed_response:,0], axis=1) > np.mean( Outrates[:, -pfcmd.delayed_response:,1], axis=1) ) 
+    else:        
+        out_higher_mean = 1.*( np.mean( Outrates[:, :,0], axis=1) > np.mean( Outrates[:, :,1], axis=1) )
 
     Matches =  1. * (Targets[:,0] == Inputs[:,0])                   #+ np.random.uniform(-noise, noise, size=(Ntrain,) )
     Responses= 1.* (out_higher_mean == Inputs[:,0]) * 0.8 + 0.1     #+ np.random.uniform(-noise, noise, size=(Ntrain,) )
+    Corrects = 1. * (Targets[:,0] == out_higher_mean)
 
     noise = 0.1
     ax = axes[3,1]
@@ -121,7 +129,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
     # ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
-    ax.set_xlim([0, 2200])
+    # ax.set_xlim([0, 2200])
     
     ax = axes[3,2]
 
@@ -132,7 +140,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.set_ylim([-0.3, 1.3])
     ax.set_xlim([970, 1100])
 
-
+    # PLOT BEHAVIOR MEASURES
     pfcmd.figOuts = plt.figure()
 
     noise = 0.05
@@ -141,8 +149,14 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 1)
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
     ax.set_title('Blue o: Correct    Orange x: response')
+
+    rm = np.convolve(Corrects, np.ones((40,))/40, mode='valid')
+    rm2 = running_mean(Corrects, 20)
+    ax.plot(rm, 'tab:red', alpha = 0.7)
+    ax.plot(rm2, 'tab:blue', alpha = 0.7)
+
     ax.set_ylim([-0.3, 1.3])
-    ax.set_xlim([0, 2200])
+    # ax.set_xlim([0, 2200])
 
     ax = pfcmd.figOuts.add_subplot(312)
     ax.plot(Matches,    'o', markersize = 2)
@@ -182,6 +196,10 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         ax = axes[1,pi]
         ax.plot(wPFC2MDs[:,0, p*pi:p*pi+5],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wPFC2MDs[:,1, p*pi:p*pi+5],'tab:blue', linewidth= pltu.linewidth)
+        wmean = np.mean(wPFC2MDs[:,0,p*pi:p*pi+p], axis=1)
+        wstd = np.mean(wPFC2MDs[:,0,p*pi:p*pi+p], axis=1)
+        ax.plot(range(len(wmean)), wmean)
+        ax.fill_between(range(len(wmean)), wmean-wstd, wmean+wstd, alpha=.4)
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to MD-0(r) 1(b)')
 
@@ -194,8 +212,13 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         # plot PFC to MD pre Traces
         ax = axes[3,pi]
         ax.plot(MDpreTraces[:,p*pi:p*pi+5], linewidth = pltu.linewidth)
-        pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
+        pltu.beautify_plot(ax,x0min=True,y0min=True, xticks=xticks, yticks= [0.11, 0.2, 0.4])
         pltu.axes_labels(ax,'Trials','pre')
+        ax.set_ylim([0, 0.5])
+        try:
+            ax.sharey(axes[3, 1])
+        except:
+            pass
 
 
     # axes[0,0].plot(wOuts[:,0,:5],'tab:red', linewidth= pltu.linewidth)
@@ -226,8 +249,8 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
     #     pltu.beautify_plot(axes[1,1],x0min=False,y0min=False)
     #     pltu.axes_labels(axes[1,1],'','wA->MD1(r) C->MD1(b)')
     if pfcmd.reinforceReservoir:
-        axes[1,2].plot(wJrecs[:,1,:5],'tab:red', linewidth= pltu.linewidth)
-        axes[1,2].plot(wJrecs[:,-1,-5:],'tab:red', linewidth= pltu.linewidth)
+        axes[1,2].plot(wJrecs[:,1,:5],'tab:orange', linewidth= pltu.linewidth)
+        axes[1,2].plot(wJrecs[:,-1,-5:],'tab:orange', linewidth= pltu.linewidth)
         pltu.beautify_plot(axes[1,2],x0min=False,y0min=False)
         pltu.axes_labels(axes[1,2],'Trials','wRec1(r) wRec40(b)')
 
@@ -235,22 +258,45 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         # pfcmd.fig3 = plt.figure(
                         # figsize=(pltu.columnwidth,pltu.columnwidth), 
                         # facecolor='w')
-        axes[2,0].plot(wMD2PFCs[:,:5,0],'r')
-        axes[2,0].plot(wMD2PFCs[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
-        pltu.beautify_plot(axes[2,0],x0min=False,y0min=False)
-        pltu.axes_labels(axes[2,0],'Trials','MD 0->A (r) 0->C (b)')
-        axes[2,1].plot(wMD2PFCMults[:,:5,0],'tab:red', linewidth= pltu.linewidth)
-        axes[2,1].plot(wMD2PFCMults[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
-        pltu.beautify_plot(axes[2,1],x0min=False,y0min=False)
-        pltu.axes_labels(axes[2,1],'Trials','Mw MD0toA(r) 0->C (b)')
-        # pfcmd.fig3.tight_layout()
-        axes[3,0].plot(wMD2PFCs[:,:5,0],'tab:red', linewidth= pltu.linewidth)
-        axes[3,0].plot(wMD2PFCs[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
-        pltu.beautify_plot(axes[3,0],x0min=False,y0min=False)
-        pltu.axes_labels(axes[3,0],'Trials','MD 1->A (r) 1->C (b)')
-        axes[3,1].plot(wMD2PFCMults[:,:5,0],'tab:red', linewidth= pltu.linewidth)
-        axes[3,1].plot(wMD2PFCMults[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
-        pltu.beautify_plot(axes[3,1],x0min=False,y0min=False)
-        pltu.axes_labels(axes[3,1],'Trials','Mw MD1toA(r) 1->C (b)')
+        # axes[2,0].plot(wMD2PFCs[:,:5,0],'r')
+        # axes[2,0].plot(wMD2PFCs[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
+        # pltu.beautify_plot(axes[2,0],x0min=False,y0min=False)
+        # pltu.axes_labels(axes[2,0],'Trials','MD 0->A (r) 0->C (b)')
+        # axes[2,1].plot(wMD2PFCMults[:,:5,0],'tab:red', linewidth= pltu.linewidth)
+        # axes[2,1].plot(wMD2PFCMults[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
+        # pltu.beautify_plot(axes[2,1],x0min=False,y0min=False)
+        # pltu.axes_labels(axes[2,1],'Trials','Mw MD0toA(r) 0->C (b)')
+        # # pfcmd.fig3.tight_layout()
+        # axes[3,0].plot(wMD2PFCs[:,:5,0],'tab:red', linewidth= pltu.linewidth)
+        # axes[3,0].plot(wMD2PFCs[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
+        # pltu.beautify_plot(axes[3,0],x0min=False,y0min=False)
+        # pltu.axes_labels(axes[3,0],'Trials','MD 1->A (r) 1->C (b)')
+        # axes[3,1].plot(wMD2PFCMults[:,:5,0],'tab:red', linewidth= pltu.linewidth)
+        # axes[3,1].plot(wMD2PFCMults[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
+        # pltu.beautify_plot(axes[3,1],x0min=False,y0min=False)
+        # pltu.axes_labels(axes[3,1],'Trials','Mw MD1toA(r) 1->C (b)')
 
     pfcmd.fig3.tight_layout()
+
+class monitor():
+    # logs values for a number of model parameters, with labels, and plots them
+    def __init__(self, labels):
+        # Get the labels of vars to follow
+        self.labels = labels
+        self.vars = [[] for n in range(len(labels))]
+        self.Nvars = len(labels)
+
+    def log(self, vars):
+        assert (len(self.labels) == len(vars), 'Missing labels or variables')
+        [self.vars[n].append(vars[n]) for n in range(len(vars))]
+    def plot(self, fig, pfcmd):
+        xticks = [0, 1000, 2000]
+        axes = fig.subplots(4,3)#, shaqrex=True) #, sharey=True)
+        fig.set_size_inches([9,7])
+        p = pfcmd.Nsub
+        for i, label in enumerate(self.labels):
+            ax = axes.flatten()[i]
+            ax.plot(self.vars[i],'tab:red', linewidth= pltu.linewidth)
+            ax.set_title(label)
+            pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
+                        
