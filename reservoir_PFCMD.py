@@ -125,30 +125,19 @@ class PFCMD():
         if self.MDEffectType == 'submult':
             # working!
             Gbase = 0.75                      # determines also the cross-task recurrence
-            self.MDamplification = 10. #0.5
+            self.MDamplification = 4. #0.5
             if self.MDstrength is None: MDval = 1.
             elif self.MDstrength < 0.: MDval = 0.
             else: MDval = self.MDstrength
-            # subtract across tasks (task with higher MD suppresses cross-tasks)
-            self.wMD2PFC = np.ones(shape=(self.Nneur,self.Nmd)) * (-10.) * MDval
-            for contexti in np.arange(self.Ncontexts):
-                self.wMD2PFC[self.Nsub*2*contexti:self.Nsub*2*(contexti+1),contexti] = 0.
             self.useMult = True
-            # multiply recurrence within task, no addition across tasks
-            ## choose below option for cross-recurrence
-            ##  if you want "MD inactivated" (low recurrence) state
-            ##  as the state before MD learning
-            #self.wMD2PFCMult = np.zeros(shape=(self.Nneur,self.Nmd))
-            # choose below option for cross-recurrence
-            #  if you want "reservoir" (high recurrence) state
-            #  as the state before MD learning (makes learning more difficult)
+            # threshold for sharp sigmoid (0.1 width) transition of MDinp
+            self.MDthreshold = 0.4
+
             self.wMD2PFCMult = np.ones(shape=(self.Nneur,self.Nmd)) \
                                 * PFC_G_off/Gbase * (1-MDval)
             for contexti in np.arange(self.Ncontexts):
                 self.wMD2PFCMult[self.Nsub*2*contexti:self.Nsub*2*(contexti+1),contexti]\
                             += PFC_G/Gbase * MDval
-            # threshold for sharp sigmoid (0.1 width) transition of MDinp
-            self.MDthreshold = 0.4
 
         else:
             print('undefined inhibitory effect of MD')
@@ -507,12 +496,12 @@ class PFCMD():
             #   as per Miconi 2017's code,
             #  but I found that it destabilized learning, so not using it.
             if self.delayed_response:
-                errorEnd = np.mean(errors[-self.delayed_response:]*errors[-self.delayed_response:]) 
+                errorEnd = np.mean(errors[-50:]*errors[-50:]) 
             else:
                 errorEnd = np.mean(errors*errors) # errors is [tsteps x Nout]
 
             if self.outExternal:
-                self.wOut -= 1/1000 * self.learning_rate * \
+                self.wOut -= self.learning_rate * \
                         (errorEnd-self.meanErrors[inpi]) * \
                             HebbTrace #* self.meanErrors[inpi]
             else:
@@ -558,7 +547,7 @@ class PFCMD():
                 # self.wPFC2MD -= np.mean(self.wPFC2MD)
                 # self.wPFC2MD *= self.G/np.sqrt(self.Nsub*2)/np.std(self.wPFC2MD) # div weights by their std to get normalized dist, then mul it by desired std
 
-            # cue-specific mean error (low-pass over many trials)
+            # cue-specific mean error (low-pass over many trials) THESE ARE OFC related computations
             self.meanErrors[inpi] = \
                 (1.0 - self.decayErrorPerTrial) * self.meanErrors[inpi] + \
                  self.decayErrorPerTrial * errorEnd
@@ -1068,7 +1057,7 @@ if __name__ == "__main__":
     PFC_G_off = 1.5
     learning_rate = 5e-6
     Ntest = 20
-    Nblock = 70
+    Nblock = 70 
     noiseSD = 1e-3
     tauError = 0.001
     reLoadWeights = False
@@ -1077,7 +1066,7 @@ if __name__ == "__main__":
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData)
     if pfcmd.blockTrain:
-        learning_cycles_per_task = 600
+        learning_cycles_per_task = 500
     else:
         learning_cycles_per_task = 400
     if not reLoadWeights:
@@ -1089,11 +1078,13 @@ if __name__ == "__main__":
             pfcmd.save()
         # save weights right after training,
         #  since test() keeps training on during MD off etc.
-        if pfcmd.debug:
-            pfcmd.test(Ntest) # Ali turned test off for now, takes time, and unclear what it tests. but good to keep monitering neuronal responses within trials.
+        # if pfcmd.debug:
+        pfcmd.test(Ntest) # Ali turned test off for now, takes time, and unclear what it tests. but good to keep monitering neuronal responses within trials.
+
         print('total_time', (time.perf_counter() - t)/60, ' minutes')
-        pfcmd.fig_monitor = plt.figure()
-        pfcmd.monitor.plot(pfcmd.fig_monitor, pfcmd)
+        
+        # pfcmd.fig_monitor = plt.figure()             # plots errors related to OFC computations
+        # pfcmd.monitor.plot(pfcmd.fig_monitor, pfcmd) # plots errors related to OFC computations
     else:
         pfcmd.load(filename)
         # all 4cues in a block
@@ -1107,9 +1098,9 @@ if __name__ == "__main__":
         # control experiment: task switch without turning MD off
         # also has 2 cues in a block, instead of 4 as in test()
         #pfcmd.taskSwitch3(Nblock,MDoff=False)
-    figs = list(map(plt.figure, plt.get_fignums()))
-    current_sizes = [(fi.canvas.height(), fi.canvas.width()) for fi in figs] #list of tuples height, width
-    from data_generator import move_figure
+    # figs = list(map(plt.figure, plt.get_fignums()))
+    # current_sizes = [(fi.canvas.height(), fi.canvas.width()) for fi in figs] #list of tuples height, width
+    # from data_generator import move_figure
     # move_figure(figs[0],col=4, position='bottom')
     # move_figure(figs[1],col=2, position='top')
     # move_figure(figs[2],col=0, position='bottom')
