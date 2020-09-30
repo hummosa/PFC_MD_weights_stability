@@ -80,7 +80,7 @@ class PFCMD():
         
         self.MDlearn = True                # whether MD should learn
                                             #  possibly to make task representations disjoint (not just orthogonal)
-
+        self.MDamplification = 4. #0.5      #This amplifies the multiplicative effect of MD on PFC recurrent connections syanptic current.
         self.MDstrength = None              # if None, use wPFC2MD, if not None as below, just use context directly
         # self.MDstrength = 0.                # a parameter that controls how much the MD disjoints task representations.
         # self.MDstrength = 1.                # a parameter that controls how much the MD disjoints task representations.
@@ -125,7 +125,7 @@ class PFCMD():
         if self.MDEffectType == 'submult':
             # working!
             Gbase = 0.75                      # determines also the cross-task recurrence
-            self.MDamplification = 4. #0.5
+            
             if self.MDstrength is None: MDval = 1.
             elif self.MDstrength < 0.: MDval = 0.
             else: MDval = self.MDstrength
@@ -370,7 +370,7 @@ class PFCMD():
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
-                    self.wMD2PFCMult = np.clip(self.wMD2PFC,0., self.MDamplification /self.G) 
+                    self.wMD2PFCMult = np.clip(self.wMD2PFC,0., MDrange/self.G) * self.MDamplification
             else:
                 if cuda:
                     with torch.no_grad():  
