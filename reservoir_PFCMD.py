@@ -54,6 +54,7 @@ class PFCMD():
         self.tauError = tauError            # smooth the error a bit, so that weights don't fluctuate
         self.modular  = True                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
+        self.MDamplification = 2.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
@@ -67,7 +68,7 @@ class PFCMD():
             self.recent_error = np.zeros(self.Ncontexts)           # Recent reward accumulator for each context
             self.recent_error_history = []  # List to keep track of entire error history
             self.decayRewardPerTrial = 0.1 # NOT in use yet  # how to decay the mean reward by, per trial
-            self.use_context_belief =False  # input routing per current context or per context belief
+            self.use_context_belief =True  # input routing per current context or per context belief
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
@@ -380,7 +381,7 @@ class PFCMD():
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
-                    self.wMD2PFCMult = np.clip(self.wMD2PFC,0., 0.5 /self.G) 
+                    self.wMD2PFCMult = np.clip(self.wMD2PFC,0., 2*MDrange /self.G) * self.MDamplification
             else:
                 if cuda:
                     with torch.no_grad():  
