@@ -18,11 +18,11 @@ if cuda: import torch
 
 class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
-                    noiseSD,tauError,plotFigs=True,saveData=False):
+                    noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
         self.debug = False
         self.RNGSEED = 1
         np.random.seed([self.RNGSEED])
-
+        self.args = args_dict # dict of args label:value
         self.Nsub = 200                     # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
@@ -1062,9 +1062,9 @@ if __name__ == "__main__":
     group=parser.add_argument("y", default= 0.3, nargs='?', type=float, help="PFC_G_off")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
-
+    args_dict = {'MDamp': args.x, 'PFC_G': args.y}
     #PFC_G = 1.6                    # if not positiveRates
-    PFC_G = 6.
+    PFC_G = args_dict['PFC_G'] #6.
     PFC_G_off = 1.5
     learning_rate = 5e-6
     learning_cycles_per_task = 600
@@ -1076,7 +1076,10 @@ if __name__ == "__main__":
     saveData = False #not reLoadWeights
     plotFigs = True#not saveData
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
-                    noiseSD,tauError,plotFigs=plotFigs,saveData=saveData)
+                    noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
+    
+    pfcmd.MDamplification = args_dict['MDamp']
+    
     if not reLoadWeights:
         t = time.perf_counter()
         pfcmd.train(learning_cycles_per_task)
@@ -1104,9 +1107,9 @@ if __name__ == "__main__":
         # control experiment: task switch without turning MD off
         # also has 2 cues in a block, instead of 4 as in test()
         #pfcmd.taskSwitch3(Nblock,MDoff=False)
-    figs = list(map(plt.figure, plt.get_fignums()))
-    current_sizes = [(fi.canvas.height(), fi.canvas.width()) for fi in figs] #list of tuples height, width
-    from data_generator import move_figure
+    #figs = list(map(plt.figure, plt.get_fignums()))
+    #current_sizes = [(fi.canvas.height(), fi.canvas.width()) for fi in figs] #list of tuples height, width
+    #from data_generator import move_figure
     # move_figure(figs[0],col=4, position='bottom')
     # move_figure(figs[1],col=2, position='top')
     # move_figure(figs[2],col=0, position='bottom')
