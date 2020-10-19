@@ -54,7 +54,7 @@ class PFCMD():
         self.tauError = tauError            # smooth the error a bit, so that weights don't fluctuate
         self.modular  = True                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
-        self.MDamplification = 2.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
+        self.MDamplification = 3.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
@@ -275,6 +275,28 @@ class PFCMD():
         
         self.data_generator = data_generator(local_Ntrain = 10000)
 
+        #Initializing weights here instead
+        if self.outExternal:
+            self.wOut = np.random.uniform(-1,1,
+                            size=(self.Nout,self.Nneur))/self.Nneur
+            self.wOut *= self.wOutMask
+        elif not MDeffect:
+            if cuda:
+                with torch.no_grad():
+                    self.Jrec -= self.learning_rate * \
+                                (errorEnd-self.meanErrors[inpi])  * \
+                                    HebbTraceRec#* self.meanErrors[inpi]  
+            else:
+                self.Jrec[-self.Nout:,:] = \
+                np.random.normal(size=(self.Nneur, self.Nneur))\
+                            *self.G/np.sqrt(self.Nsub*2)
+        # direct connections from cue to output,
+        #  similar to having output neurons within reservoir
+        if self.dirConn:
+            self.wDir = np.random.uniform(-1,1,
+                            size=(self.Nout,self.Ncues))\
+                            /self.Ncues *1.5
+ 
     def sim_cue(self,contexti,cuei,cue,target,MDeffect=True,
                     MDCueOff=False,MDDelayOff=False,
                     train=True,routsTarget=None):
@@ -282,6 +304,7 @@ class PFCMD():
         self.reinforce trains output weights
          using REINFORCE / node perturbation a la Miconi 2017.'''
         cues = np.zeros(shape=(self.tsteps,self.Ncues))
+
         # random initialization of input to units
         # very important to have some random input
         #  just for the xor task for (0,0) cue!
@@ -798,26 +821,6 @@ class PFCMD():
         wJrecs = np.zeros(shape=(Ntrain, 40, 40))
         # Reset the trained weights,
         #  earlier for iterating over MDeffect = False and then True
-        if self.outExternal:
-            self.wOut = np.random.uniform(-1,1,
-                            size=(self.Nout,self.Nneur))/self.Nneur
-            self.wOut *= self.wOutMask
-        elif not MDeffect:
-            if cuda:
-                with torch.no_grad():
-                    self.Jrec -= self.learning_rate * \
-                                (errorEnd-self.meanErrors[inpi])  * \
-                                    HebbTraceRec#* self.meanErrors[inpi]  
-            else:
-                self.Jrec[-self.Nout:,:] = \
-                np.random.normal(size=(self.Nneur, self.Nneur))\
-                            *self.G/np.sqrt(self.Nsub*2)
-        # direct connections from cue to output,
-        #  similar to having output neurons within reservoir
-        if self.dirConn:
-            self.wDir = np.random.uniform(-1,1,
-                            size=(self.Nout,self.Ncues))\
-                            /self.Ncues *1.5
         PFCrates = np.zeros( (Ntrain, self.tsteps, self.Nneur ) )
         MDinputs = np.zeros( (Ntrain, self.tsteps, self.Nmd) )
         MDrates  = np.zeros( (Ntrain, self.tsteps, self.Nmd) )
@@ -891,7 +894,8 @@ class PFCMD():
             rates =  [PFCrates, MDinputs, MDrates, Outrates, Inputs, Targets, MSEs]
             plot_weights(self, weights)
             plot_rates(self, rates)
-            dirname="results_"+str(PFC_G)+"_"+str(PFC_G_off)+"/"
+            #from IPython import embed; embed()
+            dirname="results/results_"+str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])+"/"
             if not os.path.exists(dirname):
                     os.makedirs(dirname)
             filename1=os.path.join(dirname,'fig_weights_{}.png')
@@ -920,7 +924,7 @@ class PFCMD():
         
         if self.plotFigs:
             self.fig.tight_layout()
-            dirname="results_"+str(PFC_G)+"_"+str(PFC_G_off)+"/"
+            dirname="results/results_"+str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])+"/"
             if not os.path.exists(dirname):    os.makedirs(dirname)
             filename4=os.path.join(dirname,'fig_plasticPFC2Out_{}.png')
             self.fig.savefig(filename4.format(time.strftime("%Y%m%d-%H%M%S")),
@@ -1045,6 +1049,10 @@ class PFCMD():
             self.Jrec[-self.Nout:,:] = d['JrecOut']
         if self.dirConn:
             self.wDir = d['wDir']
+        if self.MDlearn:
+            self.wMD2PFC     = d['MD2PFC']
+            self.wMD2PFCMult = d['MD2PFCMult'] 
+            self.wPFC2MD     = d['PFC2MD'] 
         d.close()
         return None
 
@@ -1055,6 +1063,11 @@ class PFCMD():
             self.fileDict['JrecOut'] = self.Jrec[-self.Nout:,:]
         if self.dirConn:
             self.fileDict['wDir'] = self.wDir
+        if self.MDlearn:
+            self.fileDict['MD2PFC'] = self.wMD2PFC
+            self.fileDict['MD2PFCMult'] = self.wMD2PFCMult
+            self.fileDict['PFC2MD'] = self.wPFC2MD
+            
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
@@ -1064,7 +1077,8 @@ if __name__ == "__main__":
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'PFC_G': args.y}
     #PFC_G = 1.6                    # if not positiveRates
-    PFC_G = args_dict['PFC_G'] #6.
+    #PFC_G = args_dict['PFC_G'] #6.
+    PFC_G = 6.
     PFC_G_off = 1.5
     learning_rate = 5e-6
     learning_cycles_per_task = 600
@@ -1073,12 +1087,12 @@ if __name__ == "__main__":
     noiseSD = 1e-3
     tauError = 0.001
     reLoadWeights = False
-    saveData = False #not reLoadWeights
+    saveData = not reLoadWeights
     plotFigs = True#not saveData
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
     
-    pfcmd.MDamplification = args_dict['MDamp']
+    #pfcmd.MDamplification = args_dict['MDamp']
     
     if not reLoadWeights:
         t = time.perf_counter()
@@ -1092,12 +1106,15 @@ if __name__ == "__main__":
         if pfcmd.debug:
             pfcmd.test(Ntest) # Ali turned test off for now, takes time, and unclear what it tests. but good to keep monitering neuronal responses within trials.
         print('total_time', (time.perf_counter() - t)/60, ' minutes')
-        pfcmd.fig_monitor = plt.figure()
-        pfcmd.monitor.plot(pfcmd.fig_monitor, pfcmd)
+        #pfcmd.fig_monitor = plt.figure()
+        #pfcmd.monitor.plot(pfcmd.fig_monitor, pfcmd)
     else:
+        filename = 'dataPFCMD/data_reservoir_PFC_MD'+str(pfcmd.MDstrength)+'_R'+str(pfcmd.RNGSEED)+ '.shelve'
         pfcmd.load(filename)
         # all 4cues in a block
-        pfcmd.test(Ntest)
+        pfcmd.train(learning_cycles_per_task)
+        if pfcmd.debug:
+            pfcmd.test(Ntest)
         
         #pfcmd.taskSwitch2(Nblock)
         

@@ -2,6 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plot_utils as pltu
 
+def running_mean(x, N):
+    cumsum = np.cumsum(np.insert(x, 0, 0)) 
+    return (cumsum[N:] - cumsum[:-N]) / float(N)
+
 def smooth(y, box_pts):
     box = np.ones(box_pts)/box_pts
     y_smooth = np.convolve(y, box, mode='same')
@@ -113,6 +117,9 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
 
     Matches =  1. * (Targets[:,0] == Inputs[:,0])                   #+ np.random.uniform(-noise, noise, size=(Ntrain,) )
     Responses= 1.* (out_higher_mean == Inputs[:,0]) * 0.8 + 0.1     #+ np.random.uniform(-noise, noise, size=(Ntrain,) )
+    Corrects = 1. * (Targets[:,0] == out_higher_mean)
+
+    pfcmd.score = np.mean(Corrects) * 100. # Add a var that holds the score of the model. % correct response. Later to be outputed as a text file.
 
     noise = 0.1
     ax = axes[3,1]
@@ -123,16 +130,14 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.set_ylim([-0.3, 1.3])
     ax.set_xlim([0, 2200])
     
-    ax = axes[3,2]
-
-    ax.plot(Matches  + np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 2)
-    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 2)
-    pltu.axes_labels(ax, 'Trials', 'non-match    Match')
-    # ax.set_title('Blue o: Correct    Orange x: response')
-    ax.set_ylim([-0.3, 1.3])
-    ax.set_xlim([970, 1100])
+    ax = axes[3,2] # Firing rates distribution
+    print('Shape is: ', PFCrates.shape)
+    ax.hist(PFCrates[900:1000], 'tab:blue') # take a slice from context 1 #[traini, Nneur] 
+    ax.hist(PFCrates[2000:2100], 'tab:red') # context 0  
+    pltu.axes_labels(ax, 'rates', 'freq')
 
 
+    # PLOT BEHAVIOR MEASURES
     pfcmd.figOuts = plt.figure()
 
     noise = 0.05
@@ -145,11 +150,17 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.set_xlim([0, 2200])
 
     ax = pfcmd.figOuts.add_subplot(312)
-    ax.plot(Matches,    'o', markersize = 2)
-    ax.plot(Responses,  'x', markersize = 2)
+    ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    'o', markersize = 1)
+    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 1)
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
+    ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
-    ax.set_xlim([960, 1230])
+    ax.set_xlim([0, 2200])
+
+    rm = np.convolve(Corrects, np.ones((40,))/40, mode='valid')
+    rm2 = running_mean(Corrects, 20)
+    ax.plot(rm, 'tab:red', alpha = 0.7)
+    ax.plot(rm2, 'tab:blue', alpha = 0.7)
 
     ax = pfcmd.figOuts.add_subplot(313)
     ax.plot(Matches,    'o', markersize = 3)
@@ -158,6 +169,8 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.set_ylim([-0.3, 1.3])
     ax.set_xlim([1970, 2050])
 
+    plt.text(0.01, 0.1, str(pfcmd.args), transform=ax.transAxes)
+    pfcmd.figRates
     pfcmd.figRates.tight_layout()
     
 
@@ -264,7 +277,6 @@ class monitor():
         self.Nvars = len(labels)
 
     def log(self, vars):
-        assert (len(self.labels) == len(vars), 'Missing labels or variables')
         [self.vars[n].append(vars[n]) for n in range(len(vars))]
     def plot(self, fig, pfcmd):
         xticks = [0, 1000, 2000]
