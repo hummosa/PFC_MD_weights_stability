@@ -132,8 +132,8 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     
     ax = axes[3,2] # Firing rates distribution
     print('Shape is: ', PFCrates.shape)
-    ax.hist(PFCrates[900:1000], 'tab:blue') # take a slice from context 1 #[traini, Nneur] 
-    ax.hist(PFCrates[2000:2100], 'tab:red') # context 0  
+    ax.hist(PFCrates[900:1000].flatten(), 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    ax.hist(PFCrates[2000:2100].flatten(), 'tab:red') # context 0  
     pltu.axes_labels(ax, 'rates', 'freq')
 
 
