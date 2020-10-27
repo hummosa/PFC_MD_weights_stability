@@ -132,8 +132,8 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     
     ax = axes[3,2] # Firing rates distribution
     print('Shape is: ', PFCrates.shape)
-    ax.hist(PFCrates[900:1000].flatten(), 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
-    ax.hist(PFCrates[2000:2100].flatten(), 'tab:red') # context 0  
+    ax.hist(PFCrates[900:1000].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    ax.hist(PFCrates[2000:2100].flatten(), alpha= 0.5) #, 'tab:red') # context 0  
     pltu.axes_labels(ax, 'rates', 'freq')
 
 
@@ -153,7 +153,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    'o', markersize = 1)
     ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 1)
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
-    ax.set_title('Blue o: Correct    Orange x: response')
+    # ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
     ax.set_xlim([0, 2200])
 
@@ -190,6 +190,8 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to Out-0 & 1 (r,b)')
         ax.set_title(PFC)
+        ax.axvspan(600, 1200, alpha=0.2, color='grey')
+        ax.axvspan(1800, 2400, alpha=0.2, color='grey')
 
     for pi, PFC in enumerate(['PFC cue 1', 'PFC cue 2', 'PFC cue 3']):
         ax = axes[1,pi]
@@ -197,18 +199,27 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         ax.plot(wPFC2MDs[:,1, p*pi:p*pi+5],'tab:blue', linewidth= pltu.linewidth)
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to MD-0(r) 1(b)')
+        ax.axvspan(600, 1200, alpha=0.2, color='grey')
+        ax.axvspan(1800, 2400, alpha=0.2, color='grey')
 
         ax = axes[2,pi]
         ax.plot(wMD2PFCs[:,p*pi:p*pi+5, 0],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wMD2PFCs[:,p*pi:p*pi+5, 1],'tab:blue', linewidth= pltu.linewidth)
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','from MD-0(r) 1(b)')
+        ax.axvspan(600, 1200, alpha=0.2, color='grey')
+        ax.axvspan(1800, 2400, alpha=0.2, color='grey')
 
         # plot PFC to MD pre Traces
         ax = axes[3,pi]
-        ax.plot(MDpreTraces[:,p*pi:p*pi+5], linewidth = pltu.linewidth)
-        pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
-        pltu.axes_labels(ax,'Trials','pre')
+        # ax.plot(MDpreTraces[:,p*pi:p*pi+5], linewidth = pltu.linewidth)
+        # pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
+        # pltu.axes_labels(ax,'Trials','pre')
+    
+    ax = axes [3,pi]
+    ax.hist(1.+wMD2PFCMults[:,p*pi:p*pi+p, 0].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    ax.hist(1.+wMD2PFCMults[:,p*pi:p*pi+p, 1].flatten(), alpha=0.4 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    pltu.axes_labels(ax, 'mul w values', 'freq')
 
 
     # axes[0,0].plot(wOuts[:,0,:5],'tab:red', linewidth= pltu.linewidth)

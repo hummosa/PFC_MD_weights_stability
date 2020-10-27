@@ -1087,7 +1087,7 @@ if __name__ == "__main__":
     noiseSD = 1e-3
     tauError = 0.001
     reLoadWeights = False
-    saveData = not reLoadWeights
+    saveData = False# not reLoadWeights
     plotFigs = True#not saveData
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)

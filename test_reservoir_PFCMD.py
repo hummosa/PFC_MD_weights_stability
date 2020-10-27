@@ -401,7 +401,8 @@ class PFCMD():
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
-                    self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange/self.G, 2*MDrange /self.G) * self.MDamplification
+                    # self.wMD2PFCMult = np.clip(self.wMD2PFC,-1/self.MDamplification, 2*MDrange /self.G) * self.MDamplification
+                    self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange /self.G, 2*MDrange /self.G) * self.MDamplification
             else:
                 if cuda:
                     with torch.no_grad():  
@@ -642,8 +643,8 @@ class PFCMD():
                 else:
                     cue[inpBase+cuei] = 1. # Pass cue to the first PFC region 
             else:
-                cue[inpBase+cuei] = 1. # Pass cue to the first PFC region 
-                cue[cuei if inpBase==2 else cuei+2] = 1.         # Pass cue to the second PFC region
+                cue[0+cuei] = 1. # Pass cue to the first PFC region 
+                cue[2+cuei] = 1. # Pass cue to the second PFC region
             
             target = np.array((1.,0.)) if targeti==0  else np.array((0.,1.))
         
@@ -908,10 +909,9 @@ class PFCMD():
 
             # output some variables of interest:
             # md ampflication and % correct responses from model.
-            filename5=os.path.join(dirname, 'values_of_interest_{}_{}.txt')
-            filename5 = filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))
+            filename5=os.path.join(dirname, 'values_of_interest.txt')
             with open(filename5, 'a') as f:
-                f.writeln('{}\t {}\n'.format(self.MDamplification, self.score) )
+                f.write('{}\t {}\n'.format(self.MDamplification, self.score) )
 
         ## MDeffect and MDCueOff
         #MSE,_,_ = self.do_test(20,self.MDeffect,True,False,
@@ -1082,9 +1082,9 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "_no_name_", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 1, nargs='?',  type=float, help="PFC_G")
-    group=parser.add_argument("y", default= 1, nargs='?', type=float, help="PFC_G_off")
+    group=parser.add_argument("exp_name", default= "_Pos_no_name_", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("x", default= 35., nargs='?',  type=float, help="PFC_G")
+    group=parser.add_argument("y", default= 6., nargs='?', type=float, help="PFC_G_off")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'PFC_G': args.y, 'exp_name': args.exp_name}
