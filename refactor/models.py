@@ -33,7 +33,7 @@ class MD(Model):
         self.neurons = np.array([0])
 
     def step(self, xWs):
-        self.neurons = xWs + 2
+        self.neurons = xWs
         print('MD', self.neurons)
         return self.neurons
 
@@ -51,7 +51,7 @@ class PFC(Model):
         self.neurons = np.array([0])
 
     def step(self, xWs):
-        self.neurons = xWs + 1
+        self.neurons = xWs
         print('PFC firing', self.neurons)
         return self.neurons
 
