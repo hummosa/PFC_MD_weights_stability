@@ -1,8 +1,15 @@
+import uuid
+import numpy as np
+
+
 class Model:
     name = ''
 
     def __init__(self, config):
-        return None
+        self.uid = uuid.uuid1()
+        # TODO self.neurons can't be empty
+        # it needs to be an initial network state from config
+        self.neurons = []
 
     def step(self, xWs):
         '''
@@ -21,11 +28,12 @@ class MD(Model):
     name = 'MD'
 
     def __init__(self, config):
+        super().__init__(config)
         self.config = config
-        self.neurons = [0]
+        self.neurons = np.array([0])
 
     def step(self, xWs):
-        self.neurons = xWs * 2
+        self.neurons = xWs + 2
         print('MD', self.neurons)
         return self.neurons
 
@@ -38,12 +46,13 @@ class PFC(Model):
     name = 'PFC'
 
     def __init__(self, config):
+        super().__init__(config)
         self.config = config
-        self.neurons = [0]
+        self.neurons = np.array([0])
 
     def step(self, xWs):
-        self.neurons = xWs * 2
-        print('PFC', self.neurons)
+        self.neurons = xWs + 1
+        print('PFC firing', self.neurons)
         return self.neurons
 
     def trial_end(self, xWs):
