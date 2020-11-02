@@ -121,8 +121,13 @@ for cuei in np.arange(config.Ncues):
 
 Other_wIn = np.random.normal( size=(config.Npfc,config.Ninputs-config.Ncues) ) * config.cueFactor
 
+<<<<<<< HEAD
 inputs = np.array(np.ones(shape=(config.Ninputs,1)))
 W_in = np.hstack((Cues_wIn, Other_wIn))
+=======
+inputs = np.array(np.ones(shape(config.Ninputs,1)))
+w_in = np.hstack((Cues_wIn, Other_wIn))
+>>>>>>> 1eb212e7acd6b7f2c0f215dc4d7ce8c70f65656e
 W_pfc_md = wPFC2MD
 W_md_pfc = wMD2PFC
 
