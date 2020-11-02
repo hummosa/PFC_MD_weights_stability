@@ -55,6 +55,7 @@ class PFCMD():
         self.modular  = True                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
         self.MDamplification = 3.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
+        self.MDlearningrate = 1e-4 # 1e-7
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
@@ -69,6 +70,9 @@ class PFCMD():
             self.recent_error_history = []  # List to keep track of entire error history
             self.decayRewardPerTrial = 0.1 # NOT in use yet  # how to decay the mean reward by, per trial
             self.use_context_belief =True  # input routing per current context or per context belief
+            self.use_context_belief_to_route_input =False  # input routing per current context or per context belief
+            self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
+            self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
@@ -191,11 +195,7 @@ class PFCMD():
         if cuda:
             self.Jrec = torch.Tensor(self.Jrec).cuda()
 
-        # if self.MDstrength < 0.: self.Jrec *= 0. # Ali commented this out. I'm setting MDstrength to None. Not sure if this is really asking if strength is ever negative
-        if self.multiAttractorReservoir:
-            for i in range(self.Ncues):
-                self.Jrec[self.Nsub*i:self.Nsub*(i+1)] *= 2.
-
+       
         # make mean input to each row zero,
         #  helps to avoid saturation (both sides) for positive-only rates.
         #  see Nicola & Clopath 2016
@@ -276,6 +276,7 @@ class PFCMD():
         self.data_generator = data_generator(local_Ntrain = 10000)
 
         #Initializing weights here instead
+        self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
         if self.outExternal:
             self.wOut = np.random.uniform(-1,1,
                             size=(self.Nout,self.Nneur))/self.Nneur
@@ -370,6 +371,10 @@ class PFCMD():
                     #  hardcoded for self.Nmd = 2
                     if MDinp[0] > MDinp[1]: MDout = np.array([1,0])
                     else: MDout = np.array([0,1])
+                    if self.use_context_belief_to_switch_MD:
+                        #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                        MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
+
 
                 MDouts[i,:] = MDout
                 MDinps[i, :]= MDinp
@@ -398,13 +403,14 @@ class PFCMD():
                     self.MDpreTrace += 1./self.tsteps/10. * \
                                         ( -self.MDpreTrace + rout )
                     # wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
-                    wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
+                    wPFC2MDdelta = self.MDlearningrate*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
                     MDrange = 0.1#0.06
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
-                    self.wMD2PFCMult = np.clip(self.wMD2PFC,0., 2*MDrange /self.G) * self.MDamplification
+                    # self.wMD2PFCMult = np.clip(self.wMD2PFC,-1/self.MDamplification, 2*MDrange /self.G) * self.MDamplification
+                    self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange /self.G, 2*MDrange /self.G) * self.MDamplification
             else:
                 if cuda:
                     with torch.no_grad():  
@@ -418,6 +424,8 @@ class PFCMD():
                 #    xadd += self.MD2PFCMult * np.dot(self.wIn,cue)
                 # baseline cue is always added
                 xadd += np.dot(self.wIn,cue)
+                if self.use_recent_reward_to_pfc_inputs:
+                    xadd += np.dot(self.wV,self.recent_error)
                 cues[i,:] = cue
                 if self.dirConn:
                     if self.outExternal:
@@ -640,13 +648,13 @@ class PFCMD():
                 targeti = cuei 
             
             if self.modular:
-                if self.use_context_belief:
+                if self.use_context_belief_to_route_input:
                     cue[self.current_context_belief*2+cuei] = 1. # Pass cue according to context belief 
                 else:
                     cue[inpBase+cuei] = 1. # Pass cue to the first PFC region 
             else:
-                cue[inpBase+cuei] = 1. # Pass cue to the first PFC region 
-                cue[cuei if inpBase==2 else cuei+2] = 1.         # Pass cue to the second PFC region
+                cue[0+cuei] = 1. # Pass cue to the first PFC region 
+                cue[2+cuei] = 1. # Pass cue to the second PFC region
             
             target = np.array((1.,0.)) if targeti==0  else np.array((0.,1.))
         
@@ -868,8 +876,7 @@ class PFCMD():
             Targets [traini, :]    = target
 
             MSEs[traini] += np.mean(errors*errors)
-            if traini ==400:
-                print('400 reached')
+
             wOuts[traini,:,:] = self.wOut
             if self.plotFigs and self.outExternal:
                 if self.MDlearn:
@@ -895,15 +902,26 @@ class PFCMD():
             plot_weights(self, weights)
             plot_rates(self, rates)
             #from IPython import embed; embed()
-            dirname="results/results_"+str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])+"/"
+            dirname="results/results_"+self.args['exp_name']+"/"
+            parm_summary= str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])
             if not os.path.exists(dirname):
                     os.makedirs(dirname)
-            filename1=os.path.join(dirname,'fig_weights_{}.png')
-            filename2=os.path.join(dirname,'fig_behavior_{}.png')
-            filename3=os.path.join(dirname, 'fig_rates_{}.png')
-            self.fig3.savefig(filename1.format(time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.figOuts.savefig(filename2.format(time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.figRates.savefig(filename3.format(time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            filename1=os.path.join(dirname, 'fig_weights_{}_{}.png')
+            filename2=os.path.join(dirname, 'fig_behavior_{}_{}.png')
+            filename3=os.path.join(dirname, 'fig_rates_{}_{}.png')
+            filename4=os.path.join(dirname, 'fig_monitored_{}_{}.png')
+            self.fig3.savefig    (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.figOuts.savefig (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.figRates.savefig(filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.fig_monitor = plt.figure()
+            self.monitor.plot(self.fig_monitor, self)
+            self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+
+            # output some variables of interest:
+            # md ampflication and % correct responses from model.
+            filename5=os.path.join(dirname, 'values_of_interest.txt')
+            with open(filename5, 'a') as f:
+                f.write('{}\t {}\n'.format(self.MDamplification, self.score) )
 
         ## MDeffect and MDCueOff
         #MSE,_,_ = self.do_test(20,self.MDeffect,True,False,
@@ -1049,10 +1067,12 @@ class PFCMD():
             self.Jrec[-self.Nout:,:] = d['JrecOut']
         if self.dirConn:
             self.wDir = d['wDir']
+
         if self.MDlearn:
             self.wMD2PFC     = d['MD2PFC']
             self.wMD2PFCMult = d['MD2PFCMult'] 
             self.wPFC2MD     = d['PFC2MD'] 
+                         
         d.close()
         return None
 
@@ -1068,14 +1088,16 @@ class PFCMD():
             self.fileDict['MD2PFCMult'] = self.wMD2PFCMult
             self.fileDict['PFC2MD'] = self.wPFC2MD
             
+            
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("x", default= 0.3, nargs='?',  type=float, help="PFC_G")
-    group=parser.add_argument("y", default= 0.3, nargs='?', type=float, help="PFC_G_off")
+    group=parser.add_argument("exp_name", default= "_direct_V_2_PFC", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("x", default= 35., nargs='?',  type=float, help="PFC_G")
+    group=parser.add_argument("y", default= 6., nargs='?', type=float, help="PFC_G_off")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
-    args_dict = {'MDamp': args.x, 'PFC_G': args.y}
+    args_dict = {'MDamp': args.x, 'PFC_G': args.y, 'exp_name': args.exp_name}
     #PFC_G = 1.6                    # if not positiveRates
     #PFC_G = args_dict['PFC_G'] #6.
     PFC_G = 6.
