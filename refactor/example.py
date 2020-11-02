@@ -1,6 +1,7 @@
 import numpy as np
+import random
 
-from network import Network
+from network import Network, Simulation
 import models
 
 
@@ -40,7 +41,15 @@ network.define_inputs(len(inputs), W_in, pfc)
 network.connect(pfc, md, W_pfc_md, update_W_pfc_md)
 network.connect(md, pfc, W_md_pfc, update_W_md_pfc)
 
-for t in range(0, 3):
-    inputs = [t]
-    network.step(inputs, t)
-network.trial_end()
+
+def cb(trial_num, step_name, timestep, network):
+    print(trial_num, step_name, timestep)
+
+
+def get_input(trial_num, step_name, timestep):
+    return 1 if random.random() < 0.5 else 0
+
+
+simulation = Simulation(network)
+trial_setup = [("CUE", 10, False), ("DLEAY", 10, False), ("RESP", 10, False)]
+simulation.run_trials(trial_setup, get_input, 5, cb)

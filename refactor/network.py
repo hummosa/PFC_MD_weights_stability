@@ -99,7 +99,7 @@ class Network:
         parents = self.parents_conn[model.uid]
         for parent in parents:
             parent_model, W_pc, _ = parent
-            xW += np.dot(W_pc ,parent_model.neurons )
+            xW += np.dot(W_pc, parent_model.neurons)
         return xW
 
     def update_W(self, model, t):
@@ -118,12 +118,20 @@ class Simulation:
     def __init__(self, network):
         self.network = network
 
-    def train(self, cb, params):
-        # for t in range(...)
-        #   network.step(external_inputs)
-        #   cb(network)
-        # network.trial_end()
-        return None
-
-    def test(self, cb, params):
-        return None
+    def run_trials(self, trial_setup, get_input, n_trials, cb):
+        '''
+        trial: [("STEP_NAME", n_steps, plasticity), ...]
+        get_input: ("STEP_NAME", timestep) -> input vector
+        n: number of trials to run
+        cb: (trial_num, "STEP_NAME", timestep, network) -> None
+        '''
+        for trial_num in range(1, n_trials+1):
+            timestep = 0
+            for (step_name, n_steps, is_plastic) in trial_setup:
+                for sub_step in range(n_steps):
+                    timestep += 1
+                    inp = get_input(trial_num, step_name, timestep)
+                    self.network.step(inp, timestep, is_plastic)
+                    cb(trial_num, step_name, timestep, self.network)
+            self.network.trial_end()
+            cb(trial_num, "TRIAL_END", timestep, self.network)
