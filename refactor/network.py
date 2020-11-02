@@ -52,7 +52,7 @@ class Network:
 
         m = self.conn_external['model']
         xW = self.compute_incoming_activity(m)
-        xW += external_inputs * self.conn_external['W']
+        xW += np.dot(self.conn_external['W'], external_inputs)
         m.step(xW)
 
         if plasticity:
@@ -99,7 +99,7 @@ class Network:
         parents = self.parents_conn[model.uid]
         for parent in parents:
             parent_model, W_pc, _ = parent
-            xW += parent_model.neurons * W_pc
+            xW += np.dot(W_pc ,parent_model.neurons )
         return xW
 
     def update_W(self, model, t):

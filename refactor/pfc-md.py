@@ -81,9 +81,9 @@ class Config():
 
 config = Config()
 
-md = models.MD({})
-pfc = models.PFC({})
-ofc = models.PFC({})
+md = models.MD(config)
+pfc = models.PFC(config)
+ofc = models.PFC(config)
 
 ofc.current_context_belief = 0 # Which context is the network assuming currently
 ofc.pcontext = np.ones(config.Ncontexts)/ config.Ncontexts  # prob of being in each context.
@@ -121,13 +121,8 @@ for cuei in np.arange(config.Ncues):
 
 Other_wIn = np.random.normal( size=(config.Npfc,config.Ninputs-config.Ncues) ) * config.cueFactor
 
-<<<<<<< HEAD
 inputs = np.array(np.ones(shape=(config.Ninputs,1)))
 W_in = np.hstack((Cues_wIn, Other_wIn))
-=======
-inputs = np.array(np.ones(shape(config.Ninputs,1)))
-w_in = np.hstack((Cues_wIn, Other_wIn))
->>>>>>> 1eb212e7acd6b7f2c0f215dc4d7ce8c70f65656e
 W_pfc_md = wPFC2MD
 W_md_pfc = wMD2PFC
 
@@ -160,6 +155,6 @@ network.connect(pfc, md, W_pfc_md, update_W_pfc_md)
 network.connect(md, pfc, W_md_pfc, update_W_md_pfc)
 
 for t in range(0, 3):
-    inputs = [t]
+    inputs = [1] * 4
     network.step(inputs, t)
 network.trial_end()
