@@ -121,7 +121,7 @@ class Simulation:
     def run_trials(self, trial_setup, get_input, n_trials, cb):
         '''
         trial: [("STEP_NAME", n_steps, plasticity), ...]
-        get_input: ("STEP_NAME", timestep) -> input vector
+        get_input: (trial_num, "STEP_NAME", timestep) -> input vector
         n: number of trials to run
         cb: (trial_num, "STEP_NAME", timestep, network) -> None
         '''
