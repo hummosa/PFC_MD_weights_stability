@@ -3,6 +3,7 @@ import random
 
 from network import Network, Simulation
 import models
+import utils
 
 
 md = models.MD({})
@@ -51,5 +52,14 @@ def get_input(trial_num, step_name, timestep):
 
 
 simulation = Simulation(network)
-trial_setup = [("CUE", 10, False), ("DLEAY", 10, False), ("RESP", 10, False)]
-simulation.run_trials(trial_setup, get_input, 5, cb)
+trial_setup = [("CUE", 2, False), ("DLEAY", 2, False), ("RESP", 2, False)]
+simulation.run_trials(trial_setup, get_input, 1, cb)
+
+utils.save_network('test.txt', network)
+loaded_net = utils.load_network('test.txt')
+print('----------------------------------------')
+print('loaded network', loaded_net)
+
+simulation = Simulation(loaded_net)
+trial_setup = [("CUE", 1, False)]
+simulation.run_trials(trial_setup, get_input, 1, cb)

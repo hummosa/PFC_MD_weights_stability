@@ -7,9 +7,9 @@ class Model:
 
     def __init__(self, config):
         self.uid = uuid.uuid1()
-        # TODO self.neurons can't be empty
-        # it needs to be an initial network state from config
         self.neurons = []
+        self.weights = []
+        self.config = None
 
     def step(self, xWs):
         '''
