@@ -6,7 +6,7 @@ import torch
 
 import sys,shelve, tqdm, time
 # from data_generator import data_generator
-from plot_figures import monitor
+from plot.plot_figures import monitor
 
 
 class Config():
@@ -59,7 +59,6 @@ class Config():
 
 
         self.noisePresent = True           # add noise to all reservoir units
-
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017
@@ -129,29 +128,41 @@ W_md_pfc = wMD2PFC
 
 def update_W_md_pfc(md, pfc, W, tstep):
     k, t = tstep
+    W_new = W
     if k == 'STEP':
-        W_new = W * 2
-        print('STEP: MD->PFC W', W, W_new)
-        return W_new
+        hebbian_learning_bias = 0.13
+        MDrange = 0.1#0.06
+
+        pre = md.neurons - hebbian_learning_bias
+        post = pfc.neurons
+        W_delta = config.MDlearningrate* np.outer(post, pre)
+        W_new = np.clip(W +W_delta,  -MDrange ,MDrange ) # Clip to specified range
+            # else:
+        # print('STEP: MD->PFC W', W, W_new)
     elif k == 'TRIAL_END':
         print('TRIAL_END: MD->PFC W', W)
-        return W
+
+    return W_new
 
 
-def update_W_pfc_md(pfc, md, W, tstep):
+def update_W_pfc_out(pfc, out, W, tstep):
     k, t = tstep
+    W_new = W
     if k == 'STEP':
-        W_new = W * 2
-        print('STEP: PFC->MD W', W, W_new)
+        # add perturbation to post neurons
+
+        # keep track of perturbation history or i.e eligibility trace pending reward feedback
+
+        print('STEP: PFC->OUT W', W, W_new)
         return W_new
     elif k == 'TRIAL_END':
-        print('TRIAL_END: PFC->MD W', W)
-        return W
+        print('TRIAL_END: PFC->OUT W', W)
+    return W_new
 
 
 network = Network()
 network.define_inputs(len(inputs), W_in, pfc)
-network.connect(pfc, md, W_pfc_md, update_W_pfc_md)
+network.connect(pfc, md, W_pfc_md, update_W_md_pfc)
 network.connect(md, pfc, W_md_pfc, update_W_md_pfc)
 
 for t in range(0, 3):

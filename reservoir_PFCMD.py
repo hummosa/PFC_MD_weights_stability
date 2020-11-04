@@ -52,9 +52,9 @@ class PFCMD():
                                             # Creates a training_schedule. Specifies task context for each block 
                                             # Currently just loops through available contexts
         self.tauError = tauError            # smooth the error a bit, so that weights don't fluctuate
-        self.modular  = True                # Assumes PFC modules and pass input to only one module per tempral context.
+        self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
-        self.MDamplification = 3.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
+        self.MDamplification = 60.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 1e-4 # 1e-7
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
@@ -71,8 +71,8 @@ class PFCMD():
             self.decayRewardPerTrial = 0.1 # NOT in use yet  # how to decay the mean reward by, per trial
             self.use_context_belief =True  # input routing per current context or per context belief
             self.use_context_belief_to_route_input =False  # input routing per current context or per context belief
-            self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
-            self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
+            self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
+            self.use_recent_reward_to_pfc_inputs = False  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
@@ -403,7 +403,7 @@ class PFCMD():
                     self.MDpreTrace += 1./self.tsteps/10. * \
                                         ( -self.MDpreTrace + rout )
                     # wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
-                    wPFC2MDdelta = self.MDlearningrate*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
+                    wPFC2MDdelta = self.MDlearningrate*np.outer(MDout-0.5,self.MDpreTrace-0.13) # Ali changed from 1e-4 and thresh from 0.13
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
                     MDrange = 0.1#0.06
                     MDweightdecay = 1.#0.996
