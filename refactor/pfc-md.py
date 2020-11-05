@@ -126,44 +126,76 @@ W_pfc_md = wPFC2MD
 W_md_pfc = wMD2PFC
 
 
-def update_W_md_pfc(md, pfc, W, tstep):
+def update_W_Hebbian(pre, post, W, tstep):
     k, t = tstep
     W_new = W
     if k == 'STEP':
         hebbian_learning_bias = 0.13
-        MDrange = 0.1#0.06
+        Allowable_Weight_range = 0.1#0.06
 
-        pre = md.neurons - hebbian_learning_bias
-        post = pfc.neurons
-        W_delta = config.MDlearningrate* np.outer(post, pre)
-        W_new = np.clip(W +W_delta,  -MDrange ,MDrange ) # Clip to specified range
+        pre_activity = pre.neurons - hebbian_learning_bias
+        post_activity = post.neurons
+        W_delta = config.MDlearningrate* np.outer(post_activity, pre_activity)
+        W_new = np.clip(W +W_delta,  -Allowable_Weight_range ,Allowable_Weight_range ) # Clip to specified range
             # else:
         # print('STEP: MD->PFC W', W, W_new)
     elif k == 'TRIAL_END':
+        # Synaptic scaling
+        # TODO how to maintain initial l2 norm of the weights at simulation begining for this calculation
+        W /= np.linalg.norm(W)/ initial_norm_wPFC2MD
+
         print('TRIAL_END: MD->PFC W', W)
+
 
     return W_new
 
 
-def update_W_pfc_out(pfc, out, W, tstep):
+def update_node_perturbation(pre, post, W, tstep):
     k, t = tstep
     W_new = W
     if k == 'STEP':
-        # add perturbation to post neurons
-
-        # keep track of perturbation history or i.e eligibility trace pending reward feedback
+        # add perturbation to post neurons  Exploratory perturbations a la Miconi 2017
+        # Perturb each output neuron independently  with probability perturbProb
+        perturbationOff = np.where(
+                np.random.uniform(size=len(post.neurons))>=config.perturbProb )
+        perturbation = np.random.uniform(-1,1,size=len(post.neurons))
+        perturbation[perturbationOff] = 0.
+        perturbation *= config.perturbAmpl
+        post.neurons += perturbation
+        # accummulate eligibility trace (pre*perturbation) pending reward feedback
+        # TODO where does HebbTrace live (persist)?
+        HebbTrace += pre.neurons * perturbation
 
         print('STEP: PFC->OUT W', W, W_new)
         return W_new
     elif k == 'TRIAL_END':
+        # use reward info to update weights based on pre-activity * perturbation eligibility trace
+        # with learning using REINFORCE / node perturbation (Miconi 2017),
+        #  the weights are only changed once, at the end of the trial
+        # apart from eta * (err-baseline_err) * hebbianTrace,
+        #  the extra factor baseline_err helps to stabilize learning  as per Miconi 2017's code,
+        #  but I found that it destabilized learning, so not using it. 
+
+        # TODO (ALI: There was a bug in calculating baseline_err, worth trying to add it back in)
+        
+        # TODO pass error information to this code. Through class? as input to the update fxn?
+        if config.delayed_response:
+            errorEnd = np.mean(errors[-50:]*errors[-50:]) 
+        else:
+            errorEnd = np.mean(errors*errors) # errors is [tsteps x Nout]
+
+        W_delta = (errorEnd-meanErrors[inpi]) * \
+                        HebbTrace #* self.meanErrors[inpi]
+        W_new += config.learning_rate * W_delta                        
         print('TRIAL_END: PFC->OUT W', W)
     return W_new
 
 
 network = Network()
 network.define_inputs(len(inputs), W_in, pfc)
-network.connect(pfc, md, W_pfc_md, update_W_md_pfc)
-network.connect(md, pfc, W_md_pfc, update_W_md_pfc)
+network.connect(pfc, md, W_pfc_md, update_W_Hebbian)
+network.connect(md, pfc, W_md_pfc, update_W_Hebbian)
+network.connect(pfc, out, W_pfc_out, update_node_perturbation)
 
 for t in range(0, 3):
     inputs = [1] * 4
