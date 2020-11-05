@@ -4,30 +4,33 @@ import numpy as np
 class Network:
     def __init__(self):
         self.models = []
-        self.conn_external = {'n': 0, 'W': [], 'model': None}
-        self.children_conn = {}  # {parent_uid: [(child, Wpc, update_W), ...]}
-        self.parents_conn = {}  # {child_uid: [(parent, Wpc, update_W), ...]}
+        self.conn_external = {'W': [], 'model': None}
+        # {parent_uid: [(child, Wpc, update_W, state), ...]}
+        self.children_conn = {}
+        # {child_uid: [(parent, Wpc, update_W, state), ...]}
+        self.parents_conn = {}
 
-    def define_inputs(self, n, W, model):
+    def define_inputs(self, W, model):
         '''
         Define external inputs.
         n: # of external inputs
         model: model that receives the inputs
         W: weights from inputs to model
         '''
-        self.conn_external = {'n': n, 'W': W, 'model': model}
+        self.conn_external = {'W': W, 'model': model}
+        self.parents_conn[model.uid] = []
 
-    def connect(self, parent, child, W, update_W):
+    def connect(self, parent, child, W, update_W, state):
         '''
         Connect models to create a network.
         model1: from model
         model2: to model
         W: weights that connect model1 to model2
-        update_W: (parent, child, W, ('STEP'|'TRIAL_END', time)) -> W'
+        update_W: {f: (parent, child, W, ('STEP'|'TRIAL_END', time)) -> W', dat: {}}
         '''
 
-        new_child = (child, W, update_W)
-        new_parent = (parent, W, update_W)
+        new_child = (child, W, update_W, state)
+        new_parent = (parent, W, update_W, state)
 
         if parent.uid in self.children_conn:
             self.children_conn[parent.uid].append(new_child)
@@ -45,25 +48,22 @@ class Network:
             self.models.append(child)
 
     def step(self, external_inputs, tstep, plasticity=True):
-        print('timestep =', tstep)
-        print('input firing', external_inputs)
-
         tracker = set()
 
-        m = self.conn_external['model']
-        xW = self.compute_incoming_activity(m)
+        model = self.conn_external['model']
+        xW = self.compute_incoming_activity(model)
         xW += np.dot(self.conn_external['W'], external_inputs)
-        m.step(xW)
+        model.step(xW)
 
         if plasticity:
-            self.update_W(m, ('STEP', tstep))
+            self.update_W(model, ('STEP', tstep))
 
-        tracker.add(m.uid)
+        tracker.add(model.uid)
 
-        if m.uid not in self.children_conn:
+        if model.uid not in self.children_conn:
             return
 
-        children = self.children_conn[m.uid]
+        children = self.children_conn[model.uid]
         for child in children:
             self._step(child[0], tracker, tstep, plasticity)
 
@@ -98,20 +98,22 @@ class Network:
         xW = np.zeros(len(model.neurons))
         parents = self.parents_conn[model.uid]
         for parent in parents:
-            parent_model, W_pc, _ = parent
+            parent_model, W_pc, _, _ = parent
             xW += np.dot(W_pc, parent_model.neurons)
         return xW
 
-    def update_W(self, model, t):
+    def update_W(self, model, step):
         parents = self.parents_conn[model.uid]
-        for i, (parent, W_pc, update_W) in enumerate(parents):
-            W_new = update_W(parent, model, W_pc, t)
-            self.parents_conn[model.uid][i] = (parent, W_new, update_W)
+        for i, (parent, W_pc, update_W, state) in enumerate(parents):
+            (state_new, W_new) = update_W(step, state, W_pc, parent, model)
+            self.parents_conn[model.uid][i] = (
+                parent, W_new, update_W, state_new)
             parent_children = self.children_conn[parent.uid]
             for j, parent_child in enumerate(parent_children):
                 if parent_child[0].uid != model.uid:
                     continue
-                self.children_conn[parent.uid][j] = (model, W_new, update_W)
+                self.children_conn[parent.uid][j] = (
+                    model, W_new, update_W, state_new)
 
 
 class Simulation:
