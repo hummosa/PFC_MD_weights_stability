@@ -48,13 +48,46 @@ class PFC(Model):
     def __init__(self, config):
         super().__init__(config)
         self.config = config
-        self.neurons = [1]  # np.zeros(shape=(config.Npfc))
+        self.neurons = np.zeros(shape=(2, 0))
 
     def step(self, xWs):
-        self.neurons = xWs
-        print('PFC firing', self.neurons)
+        if xWs[0] > xWs[1]:
+            self.neurons = np.array([1, 0])
+        else:
+            self.neurons = np.array([0, 1])
         return self.neurons
 
     def trial_end(self, xWs):
-        print('PFC trial end called')
+        return self.neurons
+
+
+class Output(Model):
+    name = 'Output'
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.neurons = np.zeros([0, 0])
+
+    def step(self, xWs):
+        self.neurons = xWs
+        return self.neurons
+
+    def trial_end(self, xWs):
+        return self.neurons
+
+
+class OFC(Model):
+    name = 'OFC'
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+        # TODO set this to start at 0,0 -- once global signals are working
+        self.neurons = np.array([0.7, 0.3])
+
+    def step(self, xWs):
+        return self.neurons
+
+    def trial_end(self, xWs):
+        # TODO compute average trace
         return self.neurons

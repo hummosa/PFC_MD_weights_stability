@@ -87,12 +87,17 @@ class Network:
             self._step(child[0], tracker, tstep, plasticity)
 
     def trial_end(self, plasticity=True):
+        # TODO compute output error (target - output)
+        # TODO compute reward prediction error (?)
         for model in self.models:
-            xW = self.compute_incoming_activity(model)
-            model.trial_end(xW)
-
-            if plasticity:
-                self.update_W(model, ('TRIAL_END', None))
+            # TODO send global signals in trial_end()
+            if model.uid not in self.parents_conn:
+                model.trial_end(None)
+            else:
+                xW = self.compute_incoming_activity(model)
+                model.trial_end(xW)
+                if plasticity:
+                    self.update_W(model, ('TRIAL_END', None))
 
     def compute_incoming_activity(self, model):
         xW = np.zeros(len(model.neurons))
@@ -120,7 +125,7 @@ class Simulation:
     def __init__(self, network):
         self.network = network
 
-    def run_trials(self, trial_setup, get_input, n_trials, cb):
+    def run_trials(self, trial_setup, get_input, get_output, n_trials, cb):
         '''
         trial: [("STEP_NAME", n_steps, plasticity), ...]
         get_input: (trial_num, "STEP_NAME", timestep) -> input vector
@@ -130,10 +135,11 @@ class Simulation:
         for trial_num in range(1, n_trials+1):
             timestep = 0
             for (step_name, n_steps, is_plastic) in trial_setup:
-                for sub_step in range(n_steps):
+                for _ in range(n_steps):
                     timestep += 1
                     inp = get_input(trial_num, step_name, timestep)
                     self.network.step(inp, timestep, is_plastic)
-                    cb(trial_num, step_name, timestep, self.network)
-            self.network.trial_end()
-            cb(trial_num, "TRIAL_END", timestep, self.network)
+                    cb(trial_num, step_name, timestep, inp, self.network)
+            expected_output = get_output(trial_num, inp)
+            self.network.trial_end()  # TODO pass expected output
+            cb(trial_num, "TRIAL_END", timestep, inp, self.network)
