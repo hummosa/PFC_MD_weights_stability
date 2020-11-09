@@ -30,7 +30,8 @@ class MD(Model):
     def __init__(self, config):
         super().__init__(config)
         self.config = config
-        self.neurons = [1]  # np.zeros(shape=(config.Nmd))
+        # self.neurons = [1]
+        self.neurons = np.zeros(shape=(config.Nmd))
 
     def step(self, xWs):
         self.neurons = xWs
@@ -48,7 +49,8 @@ class PFC(Model):
     def __init__(self, config):
         super().__init__(config)
         self.config = config
-        self.neurons = [1]  # np.zeros(shape=(config.Npfc))
+        # self.neurons = [1]
+        self.neurons = np.zeros(shape=(config.Npfc))
 
     def step(self, xWs):
         self.neurons = xWs

@@ -322,6 +322,7 @@ class PFCMD():
         outs = np.zeros(shape=(self.tsteps,self.Nout))
         out = np.zeros(self.Nout)
         errors = np.zeros(shape=(self.tsteps,self.Nout))
+        errors_other = np.zeros(shape=(self.tsteps,self.Nout))
         error_smooth = np.zeros(shape=self.Nout)
         if self.reinforce:
             HebbTrace = np.zeros(shape=(self.Nout,self.Nneur))
@@ -591,15 +592,31 @@ class PFCMD():
                 # self.wPFC2MD *= self.G/np.sqrt(self.Nsub*2)/np.std(self.wPFC2MD) # div weights by their std to get normalized dist, then mul it by desired std
 
             # cue-specific mean error (low-pass over many trials)
-            self.meanErrors[inpi] = \
-                (1.0 - self.decayErrorPerTrial) * self.meanErrors[inpi] + \
-                 self.decayErrorPerTrial * errorEnd
-            # self.recent_error[self.current_context_belief] = self.meanErrors[inpi]
+            # self.meanErrors[inpi] = \
+            #     (1.0 - self.decayErrorPerTrial) * self.meanErrors[inpi] + \
+            #      self.decayErrorPerTrial * errorEnd
+            
+            # hack and slash calculate error had the model taken the target been the oppisite direction (or the model had taken the other startegy)
+            errors_other = errors + target - np.abs(target -1.)
+            if self.delayed_response:
+                errorEnd_other = np.mean(errors_other[-50:]*errors_other[-50:]) 
+            else:
+                errorEnd_other = np.mean(errors_other*errors_other) # errors is [tsteps x Nout]
+            # arrange errors into a matrix depending on which error is match and non-match
+            errorEnd_m = np.array([errorEnd, errorEnd_other]) if inpi==0. else np.array([errorEnd_other, errorEnd ])
+
+            self.meanErrors = \
+                (1.0 - self.decayErrorPerTrial) * self.meanErrors + \
+                 self.decayErrorPerTrial * errorEnd_m
+
+            # self.recent_error[self.current_context_belief] = self.meanErrors
             if self.use_context_belief:
             #     self.recent_error[self.current_context_belief] =(1.0 - self.decayErrorPerTrial) * self.recent_error[self.current_context_belief] + \
-            #      self.decayErrorPerTrial * self.meanErrors[inpi]
+            #      self.decayErrorPerTrial * self.meanErrors
             # else:
-                self.recent_error[inpi] = self.meanErrors[inpi] # TODO temporarily not using context belief
+                self.recent_error = self.meanErrors # TODO temporarily not using context belief
+                # I start with match context 0.9. So match startegy would have 0.1 error
+                self.recent_error = np.array([0.1, 0.9]) if inpi==0 else np.array([0.9, 0.1])
 
         if train and self.outExternal:
             self.wOut *= self.wOutMask
