@@ -54,8 +54,9 @@ class PFCMD():
         self.tauError = tauError            # smooth the error a bit, so that weights don't fluctuate
         self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
-        self.MDamplification = 60.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
+        self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 1e-4 # 1e-7
+        self.MDlearningBias = 0.14
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
@@ -71,7 +72,7 @@ class PFCMD():
             self.decayRewardPerTrial = 0.1 # NOT in use yet  # how to decay the mean reward by, per trial
             self.use_context_belief =True  # input routing per current context or per context belief
             self.use_context_belief_to_route_input =False  # input routing per current context or per context belief
-            self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
+            self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
             self.use_recent_reward_to_pfc_inputs = False  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
@@ -403,7 +404,7 @@ class PFCMD():
                     self.MDpreTrace += 1./self.tsteps/10. * \
                                         ( -self.MDpreTrace + rout )
                     # wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
-                    wPFC2MDdelta = self.MDlearningrate*np.outer(MDout-0.5,self.MDpreTrace-0.13) # Ali changed from 1e-4 and thresh from 0.13
+                    wPFC2MDdelta = self.MDlearningrate*np.outer(MDout-0.5,self.MDpreTrace-self.MDlearningBias) # Ali changed from 1e-4 and thresh from 0.13
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
                     MDrange = 0.1#0.06
                     MDweightdecay = 1.#0.996
@@ -1092,12 +1093,12 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "_direct_V_2_PFC", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 35., nargs='?',  type=float, help="PFC_G")
-    group=parser.add_argument("y", default= 6., nargs='?', type=float, help="PFC_G_off")
+    group=parser.add_argument("exp_name", default= "_V1_V2_PFC", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("x", default= 35., nargs='?',  type=float, help="arg_1")
+    group=parser.add_argument("y", default= 6., nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
-    args_dict = {'MDamp': args.x, 'PFC_G': args.y, 'exp_name': args.exp_name}
+    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'exp_name': args.exp_name}
     #PFC_G = 1.6                    # if not positiveRates
     #PFC_G = args_dict['PFC_G'] #6.
     PFC_G = 6.
@@ -1114,7 +1115,8 @@ if __name__ == "__main__":
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
     
-    #pfcmd.MDamplification = args_dict['MDamp']
+    pfcmd.MDamplification = args_dict['MDamp']
+    pfcmd.MDlearningrate = args_dict['MDlr']
     
     if not reLoadWeights:
         t = time.perf_counter()
