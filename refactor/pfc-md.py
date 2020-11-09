@@ -125,6 +125,13 @@ W_in = np.hstack((Cues_wIn, Other_wIn))
 W_pfc_md = wPFC2MD
 W_md_pfc = wMD2PFC
 
+weight_state = {'initial_norm_wMD2PFC': initial_norm_wMD2PFC, 
+                'initial_norm_wPFC2MD': initial_norm_wPFC2MD}
+ofc_state = {'match_expected_value'    : 0.,
+             'non_match_expected_value': 0.,
+             'current_reward'          : 0.,
+             'current_strategy_belief' : 0.,
+             }
 
 def update_W_Hebbian(pre, post, W, tstep):
     k, t = tstep
