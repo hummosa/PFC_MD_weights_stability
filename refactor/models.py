@@ -45,10 +45,12 @@ class PFC(Model):
         self.neurons = np.array([0., 0.])
 
     def step(self, xWs, plasticity):
-        if xWs[0] > xWs[1]:
-            self.neurons = np.array([1, 0])
-        else:
-            self.neurons = np.array([0, 1])
+        inp = np.array([1, 0]) if xWs[0] > 1 else np.array([0, 1])
+        ofc_inp = xWs - inp
+        if ofc_inp[0] > ofc_inp[1]:  # Match
+            self.neurons = inp
+        else:  # Nonmatch
+            self.neurons = abs(inp - 1)
         return self.neurons
 
     def trial_end(self, global_signals, plasticity):
@@ -83,8 +85,14 @@ class OFC(Model):
         return self.neurons
 
     def trial_end(self, global_signals, plasticity):
-        # TODO compute reward prediction error and averaging
         self.n += 1
-        print('error', global_signals['error'])
-        self.neurons = self.neurons + (global_signals['error'] / self.n)
+        new_neurons = 0.65 * self.neurons + 0.35 * global_signals['error']
+        new_neurons = new_neurons / np.linalg.norm(new_neurons, 1)
+
+        idx = np.where(new_neurons == 1)
+        if len(idx) > 0:
+            new_neurons[idx[0]] = 0.9
+            new_neurons[abs(idx[0]-1)] = 0.1
+
+        self.neurons = new_neurons
         return self.neurons

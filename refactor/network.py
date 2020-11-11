@@ -130,16 +130,18 @@ class Simulation:
         cb: (trial_num, "STEP_NAME", timestep, network) -> None
         '''
         for trial_num in range(1, n_trials+1):
-            timestep = 0
+            timestep = 1
+            inps_arr = []
             for (step_name, n_steps, is_plastic) in trial_setup:
                 for _ in range(n_steps):
-                    timestep += 1
-                    inp = get_input(trial_num, step_name, timestep)
+                    prev_inp = inps_arr[-1] if len(inps_arr) > 0 else None
+                    inp = get_input(trial_num, step_name, timestep, prev_inp)
                     self.network.step(inp, timestep, is_plastic)
-                    expected_output = get_output(trial_num, inp)
                     cb(trial_num, step_name, timestep,
-                       inp, expected_output, self.network)
-            expected_output = get_output(trial_num, inp)
+                       inp, None, self.network)
+                    inps_arr.append(inp)
+                    timestep += 1
+            expected_output = get_output(trial_num, inps_arr)
             self.network.trial_end(expected_output)
             cb(trial_num, "TRIAL_END", timestep,
                inp, expected_output, self.network)

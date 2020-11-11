@@ -13,7 +13,7 @@ ofc = models.OFC({}, 'OFC')
 output = models.Output({}, 'Output')
 
 W_in = np.array([[1, 0], [0, 1]])
-W_ofc_pfc = np.array([[1, 1], [1, 1]])
+W_ofc_pfc = np.array([[1, 0], [0, 1]])
 W_pfc_output = np.array([[1, 0], [0, 1]])
 
 
@@ -31,7 +31,6 @@ def update_W_pfc_output(step, state, W, ofc, pfc):
 def compute_global_signals(network, expected_output, plasticity):
     output = network.models['Output'].neurons
     error = output - expected_output
-    print('calc', output, expected_output)
     return {"error": error}
 
 
@@ -65,49 +64,54 @@ def cb(trial_num, step_name, timestep, inp, expected_output, network):
                 dat_output.append(model.neurons)
 
 
-def get_input(trial_num, step_name, timestep):
+def get_input(trial_num, step_name, timestep, prev_inp):
     # [UP, DOWN]
-    if step_name == 'CUE':
+    if step_name == 'CUE' and timestep == 1:
         return np.array([1., 0.]) if random.random() < 0.5 else np.array([0., 1.])
     else:
-        return [0, 0]
+        return prev_inp
 
 
-def get_output(trial_num, inp):
-    if trial_num <= 50:  # Match context
-        return inp if random.random() < 0.9 else (1 - inp)
+def get_output(trial_num, inps_arr):
+    inp = inps_arr[0]
+    if trial_num <= 25:  # Match context
+        return inp if random.random() < 0.7 else (1 - inp)
+    elif trial_num <= 50:
+        return 1 - inp if random.random() < 0.7 else (1 - inp)
     else:
-        return 1 - inp if random.random() < 0.9 else (1 - inp)
+        return inp if random.random() < 0.7 else (1 - inp)
 
 
-N = 10
+N = 75
 simulation = Simulation(network)
 trial_setup = [("CUE", 5, False)]
 simulation.run_trials(trial_setup, get_input, get_output, N, cb)
 
 # Plot results
-f, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1)
+f, (ax1, ax2, ax3) = plt.subplots(3, 1)
 # Plot input
 dat_inp = np.array(dat_inp)
+inp_y = dat_inp[:, 1] * 4
+ax1.plot(np.arange(len(inp_y)), inp_y, 'ko', label='Input')
 dat_output_expected = np.array(dat_output_expected)
-for i in range(0, len(dat_inp)):
-    color = 'g' if np.array_equal(dat_inp[i], dat_output[i]) else 'r'
-    direction = '^' if dat_inp[i][0] == 1 else 'v'
-    ax1.plot(i, 0, color + direction)
-ax1.set_title('Input')
-# Plot output
 dat_output = np.array(dat_output)
-output_up = np.nonzero(dat_output[:, 0])[0]
-output_down = np.nonzero(dat_output[:, 1])[0]
-ax2.plot(output_up, np.zeros(len(output_up)), 'k^')
-ax2.plot(output_down, np.zeros(len(output_down)), 'kv')
-ax2.set_title('Output')
+for i in range(0, len(dat_output)):
+    icon = 'go'
+    if not np.array_equal(dat_output[i], dat_output_expected[i]):
+        icon = 'gx'
+    ax1.plot(i, .3 + 4 * dat_output[i, 1], icon)
+ax1.legend()
+ax1.set_title('Behavior')
 # Plot OFC
 dat_OFC = np.array(dat_OFC)
-ax3.plot(dat_OFC)
-ax3.set_title('OFC')
+ax2.plot(dat_OFC[:, 0], label='Favor match')
+ax2.plot(dat_OFC[:, 1], label='Favor nonmatch')
+ax2.legend()
+ax2.set_title('OFC')
 # Plot PFC
 dat_PFC = np.array(dat_PFC)
-ax4.plot(dat_PFC)
-ax4.set_title('PFC')
+ax3.plot(dat_PFC[:, 0], label='Chose up')
+ax3.plot(dat_PFC[:, 1], label='Chose down')
+ax3.legend()
+ax3.set_title('PFC')
 plt.show()
