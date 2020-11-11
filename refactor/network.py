@@ -2,13 +2,15 @@ import numpy as np
 
 
 class Network:
-    def __init__(self):
-        self.models = []
+    def __init__(self, fn_global_compute):
+        self.models = {}  # { name: model }
         self.conn_external = {'W': [], 'model': None}
-        # {parent_uid: [(child, Wpc, update_W, state), ...]}
+        # {parent_name: [(child, Wpc, update_W, state), ...]}
         self.children_conn = {}
-        # {child_uid: [(parent, Wpc, update_W, state), ...]}
+        # {child_name: [(parent, Wpc, update_W, state), ...]}
         self.parents_conn = {}
+        # Function to compute global signals
+        self.compute_global_signals = fn_global_compute
 
     def define_inputs(self, W, model):
         '''
@@ -18,7 +20,7 @@ class Network:
         W: weights from inputs to model
         '''
         self.conn_external = {'W': W, 'model': model}
-        self.parents_conn[model.uid] = []
+        self.parents_conn[model.name] = []
 
     def connect(self, parent, child, W, update_W, state):
         '''
@@ -32,20 +34,20 @@ class Network:
         new_child = (child, W, update_W, state)
         new_parent = (parent, W, update_W, state)
 
-        if parent.uid in self.children_conn:
-            self.children_conn[parent.uid].append(new_child)
+        if parent.name in self.children_conn:
+            self.children_conn[parent.name].append(new_child)
         else:
-            self.children_conn[parent.uid] = [new_child]
+            self.children_conn[parent.name] = [new_child]
 
-        if child.uid in self.parents_conn:
-            self.parents_conn[child.uid].append(new_parent)
+        if child.name in self.parents_conn:
+            self.parents_conn[child.name].append(new_parent)
         else:
-            self.parents_conn[child.uid] = [new_parent]
+            self.parents_conn[child.name] = [new_parent]
 
-        if parent not in self.models:
-            self.models.append(parent)
-        if child not in self.models:
-            self.models.append(child)
+        if parent.name not in self.models:
+            self.models[parent.name] = parent
+        if child.name not in self.models:
+            self.models[child.name] = child
 
     def step(self, external_inputs, tstep, plasticity=True):
         tracker = set()
@@ -53,66 +55,66 @@ class Network:
         model = self.conn_external['model']
         xW = self.compute_incoming_activity(model)
         xW += np.dot(self.conn_external['W'], external_inputs)
-        model.step(xW)
+        model.step(xW, plasticity)
 
         if plasticity:
             self.update_W(model, ('STEP', tstep))
 
-        tracker.add(model.uid)
+        tracker.add(model.name)
 
-        if model.uid not in self.children_conn:
+        if model.name not in self.children_conn:
             return
 
-        children = self.children_conn[model.uid]
+        children = self.children_conn[model.name]
         for child in children:
             self._step(child[0], tracker, tstep, plasticity)
 
     def _step(self, model, tracker, tstep, plasticity):
-        if model.uid in tracker:
+        if model.name in tracker:
             return
 
         xW = self.compute_incoming_activity(model)
-        model.step(xW)
+        model.step(xW, plasticity)
 
         if plasticity:
             self.update_W(model, ('STEP', tstep))
 
-        tracker.add(model.uid)
+        tracker.add(model.name)
 
-        if model.uid not in self.children_conn:
+        if model.name not in self.children_conn:
             return
 
-        children = self.children_conn[model.uid]
+        children = self.children_conn[model.name]
         for child in children:
             self._step(child[0], tracker, tstep, plasticity)
 
-    def trial_end(self, plasticity=True):
-        for model in self.models:
-            xW = self.compute_incoming_activity(model)
-            model.trial_end(xW)
-
-            if plasticity:
-                self.update_W(model, ('TRIAL_END', None))
+    def trial_end(self, expected_output, plasticity=True):
+        global_signals = self.compute_global_signals(
+            self, expected_output, plasticity)
+        for model in self.models.values():
+            model.trial_end(global_signals, plasticity)
+            if plasticity and model.name in self.parents_conn:
+                self.update_W(model, ('TRIAL_END', global_signals))
 
     def compute_incoming_activity(self, model):
         xW = np.zeros(len(model.neurons))
-        parents = self.parents_conn[model.uid]
+        parents = self.parents_conn[model.name]
         for parent in parents:
             parent_model, W_pc, _, _ = parent
             xW += np.dot(W_pc, parent_model.neurons)
         return xW
 
     def update_W(self, model, step):
-        parents = self.parents_conn[model.uid]
+        parents = self.parents_conn[model.name]
         for i, (parent, W_pc, update_W, state) in enumerate(parents):
             (state_new, W_new) = update_W(step, state, W_pc, parent, model)
-            self.parents_conn[model.uid][i] = (
+            self.parents_conn[model.name][i] = (
                 parent, W_new, update_W, state_new)
-            parent_children = self.children_conn[parent.uid]
+            parent_children = self.children_conn[parent.name]
             for j, parent_child in enumerate(parent_children):
-                if parent_child[0].uid != model.uid:
+                if parent_child[0].name != model.name:
                     continue
-                self.children_conn[parent.uid][j] = (
+                self.children_conn[parent.name][j] = (
                     model, W_new, update_W, state_new)
 
 
@@ -120,7 +122,7 @@ class Simulation:
     def __init__(self, network):
         self.network = network
 
-    def run_trials(self, trial_setup, get_input, n_trials, cb):
+    def run_trials(self, trial_setup, get_input, get_output, n_trials, cb):
         '''
         trial: [("STEP_NAME", n_steps, plasticity), ...]
         get_input: (trial_num, "STEP_NAME", timestep) -> input vector
@@ -128,12 +130,18 @@ class Simulation:
         cb: (trial_num, "STEP_NAME", timestep, network) -> None
         '''
         for trial_num in range(1, n_trials+1):
-            timestep = 0
+            timestep = 1
+            inps_arr = []
             for (step_name, n_steps, is_plastic) in trial_setup:
-                for sub_step in range(n_steps):
-                    timestep += 1
-                    inp = get_input(trial_num, step_name, timestep)
+                for _ in range(n_steps):
+                    prev_inp = inps_arr[-1] if len(inps_arr) > 0 else None
+                    inp = get_input(trial_num, step_name, timestep, prev_inp)
                     self.network.step(inp, timestep, is_plastic)
-                    cb(trial_num, step_name, timestep, self.network)
-            self.network.trial_end()
-            cb(trial_num, "TRIAL_END", timestep, self.network)
+                    cb(trial_num, step_name, timestep,
+                       inp, None, self.network)
+                    inps_arr.append(inp)
+                    timestep += 1
+            expected_output = get_output(trial_num, inps_arr)
+            self.network.trial_end(expected_output)
+            cb(trial_num, "TRIAL_END", timestep,
+               inp, expected_output, self.network)
