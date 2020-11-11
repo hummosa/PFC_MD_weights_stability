@@ -12,8 +12,8 @@ pfc = models.PFC({}, 'PFC')
 ofc = models.OFC({}, 'OFC')
 output = models.Output({}, 'Output')
 
-W_in = np.array([[0, 0], [0, 0]])
-W_ofc_pfc = np.array([[1, 0], [0, 1]])
+W_in = np.array([[1, 0], [0, 1]])
+W_ofc_pfc = np.array([[1, 1], [1, 1]])
 W_pfc_output = np.array([[1, 0], [0, 1]])
 
 
@@ -31,7 +31,7 @@ def update_W_pfc_output(step, state, W, ofc, pfc):
 def compute_global_signals(network, expected_output, plasticity):
     output = network.models['Output'].neurons
     error = output - expected_output
-    print('output', output, 'expected', expected_output)
+    print('calc', output, expected_output)
     return {"error": error}
 
 
@@ -44,16 +44,18 @@ network.connect(pfc, output, W_pfc_output, update_W_pfc_output, {})
 
 
 dat_inp = []
+dat_output = []
+dat_output_expected = []
 dat_OFC = []
 dat_PFC = []
-dat_output = []
 
 
-def cb(trial_num, step_name, timestep, inp, network):
+def cb(trial_num, step_name, timestep, inp, expected_output, network):
     if step_name == 'CUE' and timestep == 1:
         dat_inp.append(inp)
 
     if step_name == 'TRIAL_END':
+        dat_output_expected.append(expected_output)
         for model in network.models.values():
             if model.name == 'OFC':
                 dat_OFC.append(model.neurons)
@@ -66,36 +68,32 @@ def cb(trial_num, step_name, timestep, inp, network):
 def get_input(trial_num, step_name, timestep):
     # [UP, DOWN]
     if step_name == 'CUE':
-        return np.array([1., 0.]) if random.random() < 0.7 else np.array([0., 1.])
+        return np.array([1., 0.]) if random.random() < 0.5 else np.array([0., 1.])
     else:
         return [0, 0]
 
 
 def get_output(trial_num, inp):
     if trial_num <= 50:  # Match context
-        return inp
+        return inp if random.random() < 0.9 else (1 - inp)
     else:
-        return 1 - inp
+        return 1 - inp if random.random() < 0.9 else (1 - inp)
 
 
+N = 10
 simulation = Simulation(network)
 trial_setup = [("CUE", 5, False)]
-simulation.run_trials(trial_setup, get_input, get_output, 100, cb)
+simulation.run_trials(trial_setup, get_input, get_output, N, cb)
 
 # Plot results
 f, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1)
 # Plot input
 dat_inp = np.array(dat_inp)
-match = dat_inp[0:50, :]
-nonmatch = dat_inp[50:100, :]
-x_up_match = np.nonzero(match[:, 0])[0]
-x_down_match = np.nonzero(match[:, 1])[0]
-ax1.plot(x_up_match, np.zeros(len(x_up_match)), 'g^')
-ax1.plot(x_down_match, np.zeros(len(x_down_match)), 'gv')
-x_up_nonmatch = np.nonzero(nonmatch[:, 0])[0] + 50
-x_down_nonmatch = np.nonzero(nonmatch[:, 1])[0] + 50
-ax1.plot(x_up_nonmatch, np.zeros(len(x_up_nonmatch)), 'r^')
-ax1.plot(x_down_nonmatch, np.zeros(len(x_down_nonmatch)), 'rv')
+dat_output_expected = np.array(dat_output_expected)
+for i in range(0, len(dat_inp)):
+    color = 'g' if np.array_equal(dat_inp[i], dat_output[i]) else 'r'
+    direction = '^' if dat_inp[i][0] == 1 else 'v'
+    ax1.plot(i, 0, color + direction)
 ax1.set_title('Input')
 # Plot output
 dat_output = np.array(dat_output)

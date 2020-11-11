@@ -32,11 +32,9 @@ class MD(Model):
 
     def step(self, xWs, plasticity):
         self.neurons = xWs
-        print('MD', self.neurons)
         return self.neurons
 
     def trial_end(self, global_signals, plasticity):
-        print('MD trial end called')
         return self.neurons
 
 
@@ -44,7 +42,7 @@ class PFC(Model):
     def __init__(self, config, name_uid):
         self.name = name_uid
         self.config = config
-        self.neurons = np.zeros(shape=(2, 0))
+        self.neurons = np.array([0., 0.])
 
     def step(self, xWs, plasticity):
         if xWs[0] > xWs[1]:
@@ -76,7 +74,8 @@ class OFC(Model):
     def __init__(self, config, name_uid):
         self.name = name_uid
         self.config = config
-        self.neurons = np.array([0, 0])
+        self.neurons = np.array([.7, .3])
+        self.n = 0
 
     def step(self, xWs, plasticity):
         # NOTE: If a model has no input,
@@ -85,6 +84,7 @@ class OFC(Model):
 
     def trial_end(self, global_signals, plasticity):
         # TODO compute reward prediction error and averaging
-        self.neurons = 0.9 * self.neurons - 0.1 * global_signals['error']
-        print('error', global_signals['error'], 'ofc', self.neurons)
+        self.n += 1
+        print('error', global_signals['error'])
+        self.neurons = self.neurons + (global_signals['error'] / self.n)
         return self.neurons

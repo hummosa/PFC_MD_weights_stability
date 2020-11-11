@@ -136,7 +136,10 @@ class Simulation:
                     timestep += 1
                     inp = get_input(trial_num, step_name, timestep)
                     self.network.step(inp, timestep, is_plastic)
-                    cb(trial_num, step_name, timestep, inp, self.network)
+                    expected_output = get_output(trial_num, inp)
+                    cb(trial_num, step_name, timestep,
+                       inp, expected_output, self.network)
             expected_output = get_output(trial_num, inp)
             self.network.trial_end(expected_output)
-            cb(trial_num, "TRIAL_END", timestep, inp, self.network)
+            cb(trial_num, "TRIAL_END", timestep,
+               inp, expected_output, self.network)
