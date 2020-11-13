@@ -1,12 +1,14 @@
 import numpy as np
+import random
+import matplotlib.pyplot as plt
 
-from network import Network
+from network import Network, Simulation
 import models
 import torch
 
 import sys,shelve, tqdm, time
 # from data_generator import data_generator
-from plot.plot_figures import monitor
+# from plot.plot_figures import monitor
 from config import Config
 
 config = Config()
