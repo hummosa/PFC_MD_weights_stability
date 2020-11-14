@@ -30,7 +30,7 @@ def stats(var, var_name=None):
 def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)', 'wCto0(r) wCto1(b)']):
     PFCrates, MDinputs, MDrates, Outrates, Inputs, Targets, MSEs= rates
     # these tensors are  training_i x tsteps x no_neuron 
-    p = pfcmd.Nsub
+    p = pfcmd.Nsub//2
     Ntrain = PFCrates[:,:, :5].shape[0]
     yticks = (0, 0.5,1)
     xticks = [0, 1000, 2000]
@@ -182,7 +182,7 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
     # pfcmd.fig3.set_figheight = pltu.twocolumnwidth
     # pfcmd.fig3.set_figwidth = pltu.twocolumnwidth
     pfcmd.fig3.set_size_inches([9,7])
-    p = pfcmd.Nsub
+    p = pfcmd.Nsub//2
     for pi, PFC in enumerate(['PFC cue 1', 'PFC cue 2', 'PFC cue 3']):
         ax = axes[0,pi]
         ax.plot(wOuts[:,0, p*pi:p*pi+5],'tab:red', linewidth= pltu.linewidth)
