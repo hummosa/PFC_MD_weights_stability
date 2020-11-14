@@ -1,12 +1,14 @@
 import numpy as np
+import random
+import matplotlib.pyplot as plt
 
-from network import Network
+from network import Network, Simulation
 import models
 import torch
 
 import sys,shelve, tqdm, time
 # from data_generator import data_generator
-from plot.plot_figures import monitor
+# from plot.plot_figures import monitor
 from config import Config
 
 config = Config()
@@ -50,10 +52,11 @@ for cuei in np.arange(config.Ncues):
             np.random.uniform(lowcue,highcue,size=config.Nsub) \
                     *config.cueFactor
 
-Other_wIn = np.random.normal( size=(config.Npfc,config.Ninputs-config.Ncues) ) * config.cueFactor
+W_ofc_pfc = np.random.normal( size=(config.Npfc,config.Nofc) ) 
 
 inputs = np.array(np.ones(shape=(config.Ninputs,1)))
-W_in = np.hstack((Cues_wIn, Other_wIn))
+# W_in = np.hstack((Cues_wIn, w_ofc_pfc)) # Keep them separated. 
+W_in = Cues_wIn
 W_pfc_md = wPFC2MD
 W_md_pfc = wMD2PFC
 W_pfc_out  = np.random.normal( size=(config.Npfc,config.Nout) )
@@ -140,6 +143,7 @@ network = Network(compute_global_signals)
 network.define_inputs(W_in, pfc)
 network.connect(pfc, md, W_pfc_md, update_W_Hebbian, config)
 network.connect(md, pfc, W_md_pfc, update_W_Hebbian, config)
+network.connect(ofc, pfc, W_ofc_pfc, update_W_Hebbian, config)
 network.connect(pfc, out, W_pfc_out, update_node_perturbation, config)
 
 

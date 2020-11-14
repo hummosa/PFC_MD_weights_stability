@@ -43,7 +43,8 @@ class PFC(Model):
     def __init__(self, config, name_uid):
         self.name = name_uid
         self.config = config
-        self.neurons = np.array([0., 0.])
+        # self.neurons = np.array([0., 0.])
+        self.neurons = np.zeros(shape=(config.Npfc))
 
     def step(self, xWs, plasticity):
         inp = np.array([1, 0]) if xWs[0] > 1 else np.array([0, 1])

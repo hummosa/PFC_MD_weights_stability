@@ -73,7 +73,8 @@ class PFCMD():
             self.use_context_belief =True  # input routing per current context or per context belief
             self.use_context_belief_to_route_input =False  # input routing per current context or per context belief
             self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
-            self.use_recent_reward_to_pfc_inputs = False  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
+            self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
+            self.wV_structured  = True      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
@@ -97,7 +98,7 @@ class PFCMD():
         self.blockTrain = False # use different levels of association for multiple blocks training
         
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017
-        self.MDreinforce = True            #  instead of error-driven learning
+        self.MDreinforce = False            #  instead of error-driven learning
                                             
         if self.reinforce:
             self.perturbProb = 50./self.tsteps
@@ -235,14 +236,26 @@ class PFCMD():
         self.__class__.activation = activation
 
         #wIn = np.random.uniform(-1,1,size=(self.Nneur,self.Ncues))
+        self.wV = np.zeros((self.Nneur,2))
         self.wIn = np.zeros((self.Nneur,self.Ncues))
-        self.cueFactor = 0.75#1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
+        self.cueFactor = 0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
         if self.positiveRates: lowcue,highcue = 0.5,1.
         else: lowcue,highcue = -1.,1
         for cuei in np.arange(self.Ncues):
             self.wIn[self.Nsub*cuei:self.Nsub*(cuei+1),cuei] = \
                     np.random.uniform(lowcue,highcue,size=self.Nsub) \
                             *self.cueFactor
+            if self.wV_structured:
+                self.wV[self.Nsub*cuei:self.Nsub*(cuei)+self.Nsub//2,0] = \
+                        np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
+                                *self.cueFactor
+                self.wV[self.Nsub*(cuei)+self.Nsub//2:self.Nsub*(cuei+1) ,1] = \
+                        np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
+                                *self.cueFactor
+
+            else:
+                self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
+
             if self.wInSpread:
                 # small cross excitation to half the neurons of cue-1 (wrap-around)
                 if cuei == 0: endidx = self.Nneur
@@ -277,7 +290,6 @@ class PFCMD():
         self.data_generator = data_generator(local_Ntrain = 10000)
 
         #Initializing weights here instead
-        self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
         if self.outExternal:
             self.wOut = np.random.uniform(-1,1,
                             size=(self.Nout,self.Nneur))/self.Nneur
@@ -1110,9 +1122,9 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "_V1_V2_PFC", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 35., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 6., nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("exp_name", default= "_structured_v", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("x", default= 1., nargs='?',  type=float, help="arg_1")
+    group=parser.add_argument("y", default= 6e-5, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'exp_name': args.exp_name}
