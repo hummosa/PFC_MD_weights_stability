@@ -14,8 +14,8 @@ from config import Config
 config = Config()
 
 md = models.MD(config, 'MD')
-out = models.MD(config, 'OUT')
-pfc = models.PFC(config, 'PFC')
+out = models.Output(config, 'OUT')
+pfc = models.PFC_reservoir(config, 'PFC')
 ofc = models.PFC(config, 'OFC')
 
 ofc.current_context_belief = 0 # Which context is the network assuming currently
@@ -52,13 +52,14 @@ for cuei in np.arange(config.Ncues):
             np.random.uniform(lowcue,highcue,size=config.Nsub) \
                     *config.cueFactor
 
-Other_wIn = np.random.normal( size=(config.Npfc,config.Ninputs-config.Ncues) ) * config.cueFactor
+W_ofc_pfc = np.random.normal( size=(config.Npfc,config.Nofc) ) 
 
 inputs = np.array(np.ones(shape=(config.Ninputs,1)))
-W_in = np.hstack((Cues_wIn, Other_wIn))
+# W_in = np.hstack((Cues_wIn, w_ofc_pfc)) # Keep them separated. 
+W_in = Cues_wIn
 W_pfc_md = wPFC2MD
 W_md_pfc = wMD2PFC
-W_pfc_out  = np.random.normal( size=(config.Npfc,config.Nout) )
+W_pfc_out  = np.random.normal( size=(config.Nout, config.Npfc) )
 
 weight_state = {'initial_norm_wMD2PFC': initial_norm_wMD2PFC, 
                 'initial_norm_wPFC2MD': initial_norm_wPFC2MD}
@@ -69,7 +70,7 @@ ofc_state = {'match_expected_value'    : 0.,
              }
 
 def update_W_Hebbian(tstep, state, W, pre, post):
-    k, t = tstep
+    k, global_signals = tstep
     W_new = W
     pre_trace = state['pre_trace']
     if k == 'STEP':
@@ -133,7 +134,7 @@ def update_node_perturbation(tstep, state, W, pre, post):
     return (state, W_new)
 
 def compute_global_signals(network, expected_output, plasticity):
-    output = network.models['Output'].neurons
+    output = network.models['OUT'].neurons
     error = output - expected_output
     return {"error": error}
 
@@ -142,6 +143,7 @@ network = Network(compute_global_signals)
 network.define_inputs(W_in, pfc)
 network.connect(pfc, md, W_pfc_md, update_W_Hebbian, config)
 network.connect(md, pfc, W_md_pfc, update_W_Hebbian, config)
+network.connect(ofc, pfc, W_ofc_pfc, update_W_Hebbian, config)
 network.connect(pfc, out, W_pfc_out, update_node_perturbation, config)
 
 
