@@ -112,7 +112,7 @@ def update_node_perturbation(tstep, state, W, pre, post):
         # accummulate eligibility trace (pre*perturbation) pending reward feedback
         # TODO where does HebbTrace live (persist)?
         
-        pre_trace += np.outer(pre.neurons , perturbation)
+        pre_trace += np.outer(perturbation, pre.neurons)
 
         print('STEP: PFC->OUT W', W, W_new)
         return W_new
@@ -126,7 +126,7 @@ def update_node_perturbation(tstep, state, W, pre, post):
         # TODO (ALI: There was a bug in calculating baseline_err, worth trying to add it back in)
         
         # TODO pass error information to this code. Through class? as input to the update fxn?
-        current_RPE = global_signals 
+        current_RPE = global_signals['error']
 
         W_new += config.learning_rate * current_RPE * pre_trace                        
         state['pre_trace'] = pre_trace
@@ -141,10 +141,10 @@ def compute_global_signals(network, expected_output, plasticity):
 
 network = Network(compute_global_signals)
 network.define_inputs(W_in, pfc)
-network.connect(pfc, md, W_pfc_md, update_W_Hebbian, config)
-network.connect(md, pfc, W_md_pfc, update_W_Hebbian, config)
-network.connect(ofc, pfc, W_ofc_pfc, update_W_Hebbian, config)
-network.connect(pfc, out, W_pfc_out, update_node_perturbation, config)
+network.connect(pfc, md, W_pfc_md, update_W_Hebbian, {'pre_trace': np.zeros(shape=(config.Npfc)), 'initial_norm':initial_norm_wPFC2MD})
+network.connect(md, pfc, W_md_pfc, update_W_Hebbian, {'pre_trace': np.zeros(shape=(config.Nmd)), 'initial_norm':initial_norm_wMD2PFC} )
+network.connect(ofc, pfc, W_ofc_pfc, update_W_Hebbian,  {'pre_trace': np.zeros(shape=(config.Npfc)), 'initial_norm': np.linalg.norm(W_ofc_pfc)})
+network.connect(pfc, out, W_pfc_out, update_node_perturbation,  {'pre_trace': np.zeros(shape=(config.Npfc, config.Nout))})
 
 
 

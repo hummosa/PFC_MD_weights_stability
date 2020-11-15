@@ -182,21 +182,39 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
     # pfcmd.fig3.set_figheight = pltu.twocolumnwidth
     # pfcmd.fig3.set_figwidth = pltu.twocolumnwidth
     pfcmd.fig3.set_size_inches([9,7])
-    p = pfcmd.Nsub//2
-    for pi, PFC in enumerate(['PFC cue 1', 'PFC cue 2', 'PFC cue 3']):
+    plot_cue_v_subpop = True
+    if plot_cue_v_subpop:
+        subplot_titles = ['Up-V1', 'Up-V2', 'Down-V1']
+        p = pfcmd.Nsub//2
+    else:
+        subplot_titles = ['PFC cue 1', 'PFC cue 2', 'PFC cue 3']
+        p = pfcmd.Nsub
+    for pi, PFC in enumerate(subplot_titles):
         ax = axes[0,pi]
         ax.plot(wOuts[:,0, p*pi:p*pi+5],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wOuts[:,1, p*pi:p*pi+5],'tab:blue', linewidth= pltu.linewidth)
+        
+        wmean = np.mean(wOuts[:,0,p*pi:p*pi+p], axis=1)
+        wstd = np.mean(wOuts[:,0,p*pi:p*pi+p], axis=1)
+        ax.plot(range(len(wmean)), wmean)
+        ax.fill_between(range(len(wmean)), wmean-wstd, wmean+wstd, alpha=.4)
+
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to Out-0 & 1 (r,b)')
         ax.set_title(PFC)
         ax.axvspan(600, 1200, alpha=0.2, color='grey')
         ax.axvspan(1800, 2400, alpha=0.2, color='grey')
 
-    for pi, PFC in enumerate(['PFC cue 1', 'PFC cue 2', 'PFC cue 3']):
+    for pi, PFC in enumerate(subplot_titles):
         ax = axes[1,pi]
         ax.plot(wPFC2MDs[:,0, p*pi:p*pi+5],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wPFC2MDs[:,1, p*pi:p*pi+5],'tab:blue', linewidth= pltu.linewidth)
+
+        wmean = np.mean(wPFC2MDs[:,0,p*pi:p*pi+p], axis=1)
+        wstd = np.mean(wPFC2MDs[:,0,p*pi:p*pi+p], axis=1)
+        ax.plot(range(len(wmean)), wmean)
+        ax.fill_between(range(len(wmean)), wmean-wstd, wmean+wstd, alpha=.4)
+
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to MD-0(r) 1(b)')
         ax.axvspan(600, 1200, alpha=0.2, color='grey')
