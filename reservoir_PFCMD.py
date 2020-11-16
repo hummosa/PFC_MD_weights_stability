@@ -56,7 +56,8 @@ class PFCMD():
         self.MDeffect = True                # whether to have MD present or not
         self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 1e-4 # 1e-7
-        self.MDlearningBias = 0.15
+        self.MDrange = 0.05
+        self.MDlearningBias = 0.16
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
@@ -179,10 +180,10 @@ class PFCMD():
             # self.wMD2PFC *= 0.
             # self.wMD2PFCMult *= 0.
             self.wPFC2MD = np.random.normal(size=(self.Nmd, self.Nneur))\
-                            *self.G/np.sqrt(self.Nsub*2)
+                            *self.MDrange # *self.G/np.sqrt(self.Nsub*2)
             self.wPFC2MD -= np.mean(self.wPFC2MD,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFC = np.random.normal(size=(self.Nneur, self.Nmd))\
-                            *self.G/np.sqrt(self.Nsub*2)
+                            *self.MDrange  #*self.G/np.sqrt(self.Nsub*2)
             self.wMD2PFC -= np.mean(self.wMD2PFC,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFCMult = self.wMD2PFC # Get the exact copy to init mult weights
             self.initial_norm_wPFC2MD = np.linalg.norm(self.wPFC2MD)
@@ -248,10 +249,10 @@ class PFCMD():
             if self.wV_structured:
                 self.wV[self.Nsub*cuei:self.Nsub*(cuei)+self.Nsub//2,0] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
-                                *self.cueFactor
+                                * 2. * self.cueFactor
                 self.wV[self.Nsub*(cuei)+self.Nsub//2:self.Nsub*(cuei+1) ,1] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
-                                *self.cueFactor
+                                * 2. * self.cueFactor
 
             else:
                 self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
@@ -419,7 +420,7 @@ class PFCMD():
                     # wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
                     wPFC2MDdelta = self.MDlearningrate*np.outer(MDout-0.5,self.MDpreTrace-self.MDlearningBias) # Ali changed from 1e-4 and thresh from 0.13
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
-                    MDrange = 0.03#0.1#0.06
+                    MDrange = self.MDrange #0.05#0.1#0.06
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
