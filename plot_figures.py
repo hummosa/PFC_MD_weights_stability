@@ -36,8 +36,6 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     xticks = [0, 1000, 2000]
     pfcmd.figRates, axes = plt.subplots(4,3)#, sharex=True)# , sharey=True)
     pfcmd.figRates.set_size_inches([9,7])
-    # from IPython import embed; embed()
-    #import pdb; pdb.set_trace()
     ax = axes[0,0]
     ax.plot(range(Ntrain),np.mean( PFCrates[:,:,:5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
@@ -56,8 +54,12 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     pltu.axes_labels(ax,'','')
     ax.set_title('PFC Cue 3')
 
+    ninp = np.array(Inputs)
     ax = axes[1,0]
-    ax.plot(range(Ntrain),np.mean( MDrates[:,:,0], axis=1), '.', markersize =0.5)
+    #plot trials with up cue or down cue with blue or red.
+    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==1.],np.mean( MDrates[:,:,0][ninp[:,0]==1.], axis=1), '-', markersize =0.5, color='tab:blue')
+    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==0.],np.mean( MDrates[:,:,0][ninp[:,0]==0.], axis=1), '-', markersize =0.5, color='tab:red')
+    # ax.plot(range(Ntrain),np.mean( MDrates[:,:,0], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','mean FR')
     ax.set_title('MD 0')
@@ -69,7 +71,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.set_title('MD 1')
     
     ax = axes[1,2]
-    ax.plot(range(Ntrain),np.mean( MDinputs[:, :,:], axis=1), '.', markersize =0.5)
+    ax.plot(range(Ntrain),np.mean( MDinputs[:, :,:], axis=1), '-', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('MD avg inputs')
@@ -122,17 +124,17 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
 
     pfcmd.score = np.mean(Corrects) * 100. # Add a var that holds the score of the model. % correct response. Later to be outputed as a text file.
 
-    noise = 0.1
+    noise = 0.15
     ax = axes[3,1]
-    ax.plot(Matches  + np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 2)
-    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 2)
+    ax.plot(Matches  + np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 0.5)
+    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 0.5)
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
     # ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
     ax.set_xlim([0, 2200])
     
     ax = axes[3,2] # Firing rates distribution
-    print('Shape is: ', PFCrates.shape)
+    # print('Shape is: ', PFCrates.shape)
     ax.hist(PFCrates[900:1000].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
     ax.hist(PFCrates[2000:2100].flatten(), alpha= 0.5) #, 'tab:red') # context 0  
     pltu.axes_labels(ax, 'rates', 'freq')

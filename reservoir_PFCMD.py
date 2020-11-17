@@ -7,6 +7,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 # plt.ion()
+# from IPython import embed; embed()
+# import pdb; pdb.set_trace()
 from scipy.io import savemat
 import sys,shelve, tqdm, time
 import plot_utils as pltu
@@ -19,7 +21,7 @@ if cuda: import torch
 class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
-        self.debug = False
+        self.debug = True
         self.RNGSEED = 1
         np.random.seed([self.RNGSEED])
         self.args = args_dict # dict of args label:value
@@ -180,10 +182,10 @@ class PFCMD():
             # self.wMD2PFC *= 0.
             # self.wMD2PFCMult *= 0.
             self.wPFC2MD = np.random.normal(size=(self.Nmd, self.Nneur))\
-                            *self.MDrange # *self.G/np.sqrt(self.Nsub*2)
+                            *self.G/np.sqrt(self.Nsub*2)
             self.wPFC2MD -= np.mean(self.wPFC2MD,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFC = np.random.normal(size=(self.Nneur, self.Nmd))\
-                            *self.MDrange  #*self.G/np.sqrt(self.Nsub*2)
+                            *self.G/np.sqrt(self.Nsub*2)
             self.wMD2PFC -= np.mean(self.wMD2PFC,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFCMult = self.wMD2PFC # Get the exact copy to init mult weights
             self.initial_norm_wPFC2MD = np.linalg.norm(self.wPFC2MD)
@@ -944,9 +946,10 @@ class PFCMD():
             self.fig3.savefig    (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figOuts.savefig (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figRates.savefig(filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.fig_monitor = plt.figure()
-            self.monitor.plot(self.fig_monitor, self)
-            self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            if self.debug:
+                self.fig_monitor = plt.figure()
+                self.monitor.plot(self.fig_monitor, self)
+                self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
 
             # output some variables of interest:
             # md ampflication and % correct responses from model.
