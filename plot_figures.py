@@ -40,25 +40,26 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.plot(range(Ntrain),np.mean( PFCrates[:,:,:5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','Mean FR')
-    ax.set_title('PFC Cue 1')
+    ax.set_title('PFC Up-V1')
     
     ax = axes[0,1]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p:p+5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','')
-    ax.set_title('PFC Cue 2')
+    ax.set_title('PFC Up-V2')
 
     ax = axes[0,2]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p*2:p*2+5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False)
     pltu.axes_labels(ax,'','')
-    ax.set_title('PFC Cue 3')
+    ax.set_title('PFC Down-V1')
 
     ninp = np.array(Inputs)
     ax = axes[1,0]
     #plot trials with up cue or down cue with blue or red.
-    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==1.],np.mean( MDrates[:,:,0][ninp[:,0]==1.], axis=1), '-', markersize =0.5, color='tab:blue')
-    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==0.],np.mean( MDrates[:,:,0][ninp[:,0]==0.], axis=1), '-', markersize =0.5, color='tab:red')
+    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==1.],np.mean( MDrates[:,:,0][ninp[:,0]==1.], axis=1), '.', markersize =0.5, color='tab:blue', label='Up')
+    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==0.],np.mean( MDrates[:,:,0][ninp[:,0]==0.], axis=1), '.', markersize =0.5, color='tab:red',  label='Down')
+    ax.legend()
     # ax.plot(range(Ntrain),np.mean( MDrates[:,:,0], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','mean FR')
@@ -71,7 +72,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.set_title('MD 1')
     
     ax = axes[1,2]
-    ax.plot(range(Ntrain),np.mean( MDinputs[:, :,:], axis=1), '-', markersize =0.5)
+    ax.plot(range(Ntrain),np.mean( MDinputs[:, :,:], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('MD avg inputs')
@@ -181,10 +182,10 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
     wOuts, wPFC2MDs, wMD2PFCs, wMD2PFCMults, wJrecs, MDpreTraces = weights
     xticks = [0, 1000, 2000]
     # plot output weights evolution
-    pfcmd.fig3, axes = plt.subplots(4,3)#, sharex=True) #, sharey=True)
+    pfcmd.fig3, axes = plt.subplots(5,3)#, sharex=True) #, sharey=True)
     # pfcmd.fig3.set_figheight = pltu.twocolumnwidth
     # pfcmd.fig3.set_figwidth = pltu.twocolumnwidth
-    pfcmd.fig3.set_size_inches([9,7])
+    pfcmd.fig3.set_size_inches([9,9])
     plot_cue_v_subpop = True
     if plot_cue_v_subpop:
         subplot_titles = ['Up-V1', 'Up-V2', 'Down-V1']
@@ -233,11 +234,11 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
 
         # plot PFC to MD pre Traces
         ax = axes[3,pi]
-        # ax.plot(MDpreTraces[:,p*pi:p*pi+5], linewidth = pltu.linewidth)
-        # pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
-        # pltu.axes_labels(ax,'Trials','pre')
+        ax.plot(MDpreTraces[:,p*pi:p*pi+5], linewidth = pltu.linewidth)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
+        pltu.axes_labels(ax,'Trials','pre')
     
-    ax = axes [3,pi]
+    ax = axes [4,pi]
     ax.hist(1.+wMD2PFCMults[:,p*pi:p*pi+p, 0].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
     ax.hist(1.+wMD2PFCMults[:,p*pi:p*pi+p, 1].flatten(), alpha=0.4 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
     pltu.axes_labels(ax, 'mul w values', 'freq')

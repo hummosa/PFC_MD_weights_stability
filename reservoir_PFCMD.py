@@ -21,11 +21,11 @@ if cuda: import torch
 class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
-        self.debug = True
+        self.debug = False
         self.RNGSEED = 1
         np.random.seed([self.RNGSEED])
         self.args = args_dict # dict of args label:value
-        self.Nsub = 200                     # number of neurons per cue
+        self.Nsub = 100                     # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
         self.Nblocks = 16                    # number of blocks
@@ -58,8 +58,8 @@ class PFCMD():
         self.MDeffect = True                # whether to have MD present or not
         self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 1e-4 # 1e-7
-        self.MDrange = 0.04
-        self.MDlearningBias = 0.16
+        self.MDrange = 0.1
+        self.MDlearningBias = 0.4
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
@@ -182,10 +182,10 @@ class PFCMD():
             # self.wMD2PFC *= 0.
             # self.wMD2PFCMult *= 0.
             self.wPFC2MD = np.random.normal(size=(self.Nmd, self.Nneur))\
-                            *self.G/np.sqrt(self.Nsub*2)
+                            *self.MDrange #*self.G/np.sqrt(self.Nsub*2)
             self.wPFC2MD -= np.mean(self.wPFC2MD,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFC = np.random.normal(size=(self.Nneur, self.Nmd))\
-                            *self.G/np.sqrt(self.Nsub*2)
+                            *self.MDrange #*self.G/np.sqrt(self.Nsub*2)
             self.wMD2PFC -= np.mean(self.wMD2PFC,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFCMult = self.wMD2PFC # Get the exact copy to init mult weights
             self.initial_norm_wPFC2MD = np.linalg.norm(self.wPFC2MD)
@@ -251,10 +251,10 @@ class PFCMD():
             if self.wV_structured:
                 self.wV[self.Nsub*cuei:self.Nsub*(cuei)+self.Nsub//2,0] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
-                                * 2. * self.cueFactor
+                                * 4. * self.cueFactor
                 self.wV[self.Nsub*(cuei)+self.Nsub//2:self.Nsub*(cuei+1) ,1] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
-                                * 2. * self.cueFactor
+                                * 4. * self.cueFactor
 
             else:
                 self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
