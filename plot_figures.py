@@ -58,8 +58,8 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ninp = np.array(Inputs)
     ax = axes[1,0]
     #plot trials with up cue or down cue with blue or red.
-    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==1.],np.mean( MDrates[:,:,:5][ninp[:,0]==1.], axis=1), '.', markersize =0.5, color='tab:blue')
-    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==0.],np.mean( MDrates[:,:,:5][ninp[:,0]==0.], axis=1), '.', markersize =0.5, color='tab:red')
+    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==1.],np.mean( MDrates[:,:,0][ninp[:,0]==1.], axis=1), '-', markersize =0.5, color='tab:blue')
+    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==0.],np.mean( MDrates[:,:,0][ninp[:,0]==0.], axis=1), '-', markersize =0.5, color='tab:red')
     # ax.plot(range(Ntrain),np.mean( MDrates[:,:,0], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','mean FR')
@@ -72,7 +72,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.set_title('MD 1')
     
     ax = axes[1,2]
-    ax.plot(range(Ntrain),np.mean( MDinputs[:, :,:], axis=1), '.', markersize =0.5)
+    ax.plot(range(Ntrain),np.mean( MDinputs[:, :,:], axis=1), '-', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('MD avg inputs')

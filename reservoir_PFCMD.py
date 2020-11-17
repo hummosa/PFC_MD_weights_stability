@@ -21,7 +21,7 @@ if cuda: import torch
 class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
-        self.debug = False
+        self.debug = True
         self.RNGSEED = 1
         np.random.seed([self.RNGSEED])
         self.args = args_dict # dict of args label:value
