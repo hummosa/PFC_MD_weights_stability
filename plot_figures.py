@@ -37,7 +37,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     pfcmd.figRates, axes = plt.subplots(4,3)#, sharex=True)# , sharey=True)
     pfcmd.figRates.set_size_inches([9,7])
     # from IPython import embed; embed()
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     ax = axes[0,0]
     ax.plot(range(Ntrain),np.mean( PFCrates[:,:,:5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)

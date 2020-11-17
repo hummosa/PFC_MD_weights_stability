@@ -26,7 +26,7 @@ class PFCMD():
         self.Nsub = 200                     # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 4                    # number of blocks
+        self.Nblocks = 16                    # number of blocks
         self.Nmd    = 2                     # number of MD cells.
         self.xorTask = False                # use xor Task or simple 1:1 map task
         # self.xorTask = True               # use xor Task or simple 1:1 map task
@@ -56,7 +56,7 @@ class PFCMD():
         self.MDeffect = True                # whether to have MD present or not
         self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 1e-4 # 1e-7
-        self.MDrange = 0.05
+        self.MDrange = 0.04
         self.MDlearningBias = 0.16
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
@@ -1134,7 +1134,7 @@ if __name__ == "__main__":
     PFC_G = 6.
     PFC_G_off = 1.5
     learning_rate = 5e-6
-    learning_cycles_per_task = 600
+    learning_cycles_per_task = 600//4
     Ntest = 20
     Nblock = 70
     noiseSD = 1e-3
