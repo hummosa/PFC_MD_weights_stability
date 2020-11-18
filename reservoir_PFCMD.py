@@ -188,8 +188,8 @@ class PFCMD():
                             *self.MDrange #*self.G/np.sqrt(self.Nsub*2)
             self.wMD2PFC -= np.mean(self.wMD2PFC,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFCMult = self.wMD2PFC # Get the exact copy to init mult weights
-            self.initial_norm_wPFC2MD = np.linalg.norm(self.wPFC2MD)
-            self.initial_norm_wMD2PFC = np.linalg.norm(self.wMD2PFC)
+            self.initial_norm_wPFC2MD = np.linalg.norm(self.wPFC2MD) * .6
+            self.initial_norm_wMD2PFC = np.linalg.norm(self.wMD2PFC) * .6
 
         self.MDpreTrace = np.zeros(shape=(self.Nneur))
 
