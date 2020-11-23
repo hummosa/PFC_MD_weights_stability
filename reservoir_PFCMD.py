@@ -1128,7 +1128,7 @@ class PFCMD():
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     group=parser.add_argument("exp_name", default= "_structured_v", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 1., nargs='?',  type=float, help="arg_1")
+    group=parser.add_argument("x", default= 40., nargs='?',  type=float, help="arg_1")
     group=parser.add_argument("y", default= 6e-6, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
