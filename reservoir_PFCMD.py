@@ -28,7 +28,8 @@ class PFCMD():
         self.Nsub = 100                     # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 16                    # number of blocks
+        self.Nblocks = 32                    # number of blocks
+        self.trials_per_block = 600//4
         self.Nmd    = 2                     # number of MD cells.
         self.xorTask = False                # use xor Task or simple 1:1 map task
         # self.xorTask = True               # use xor Task or simple 1:1 map task
@@ -59,7 +60,7 @@ class PFCMD():
         self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 1e-4 # 1e-7
         self.MDrange = 0.1
-        self.MDlearningBias = 0.4
+        self.MDlearningBias = 0.3
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
@@ -251,10 +252,10 @@ class PFCMD():
             if self.wV_structured:
                 self.wV[self.Nsub*cuei:self.Nsub*(cuei)+self.Nsub//2,0] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
-                                * 4. * self.cueFactor
+                                * self.cueFactor
                 self.wV[self.Nsub*(cuei)+self.Nsub//2:self.Nsub*(cuei+1) ,1] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
-                                * 4. * self.cueFactor
+                                * self.cueFactor
 
             else:
                 self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
@@ -1128,7 +1129,7 @@ if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     group=parser.add_argument("exp_name", default= "_structured_v", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 1., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 6e-5, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("y", default= 6e-6, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'exp_name': args.exp_name}
@@ -1137,7 +1138,6 @@ if __name__ == "__main__":
     PFC_G = 6.
     PFC_G_off = 1.5
     learning_rate = 5e-6
-    learning_cycles_per_task = 600//4
     Ntest = 20
     Nblock = 70
     noiseSD = 1e-3
@@ -1147,7 +1147,7 @@ if __name__ == "__main__":
     plotFigs = True#not saveData
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
-    
+    learning_cycles_per_task = pfcmd.trials_per_block
     pfcmd.MDamplification = args_dict['MDamp']
     pfcmd.MDlearningrate = args_dict['MDlr']
     
@@ -1197,3 +1197,4 @@ if __name__ == "__main__":
     plt.show()
     
     # plt.close('all')
+
