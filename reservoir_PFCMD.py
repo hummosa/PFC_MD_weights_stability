@@ -59,7 +59,7 @@ class PFCMD():
         self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 1e-4 # 1e-7
         self.MDrange = 0.1
-        self.MDlearningBias = 0.4
+        self.MDlearningBias = 0.3
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
         #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
@@ -251,10 +251,10 @@ class PFCMD():
             if self.wV_structured:
                 self.wV[self.Nsub*cuei:self.Nsub*(cuei)+self.Nsub//2,0] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
-                                * 4. * self.cueFactor
+                                * self.cueFactor
                 self.wV[self.Nsub*(cuei)+self.Nsub//2:self.Nsub*(cuei+1) ,1] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
-                                * 4. * self.cueFactor
+                                * self.cueFactor
 
             else:
                 self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
@@ -424,8 +424,8 @@ class PFCMD():
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
                     MDrange = self.MDrange #0.05#0.1#0.06
                     MDweightdecay = 1.#0.996
-                    self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
-                    self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
+                    self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange , MDrange ) # Ali lowered to 0.01 from 1. 
+                    self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange , MDrange ) # lowered from 10.
                     # self.wMD2PFCMult = np.clip(self.wMD2PFC,-1/self.MDamplification, 2*MDrange /self.G) * self.MDamplification
                     self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange /self.G, 2*MDrange /self.G) * self.MDamplification
             else:
@@ -1128,7 +1128,7 @@ if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     group=parser.add_argument("exp_name", default= "_structured_v", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 1., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 6e-5, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("y", default= 6e-6, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'exp_name': args.exp_name}
