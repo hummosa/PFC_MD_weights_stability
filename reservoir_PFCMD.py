@@ -28,7 +28,8 @@ class PFCMD():
         self.Nsub = 100                     # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 16                    # number of blocks
+        self.Nblocks = 32                    # number of blocks
+        self.trials_per_block = 600//4
         self.Nmd    = 2                     # number of MD cells.
         self.xorTask = False                # use xor Task or simple 1:1 map task
         # self.xorTask = True               # use xor Task or simple 1:1 map task
@@ -1137,7 +1138,6 @@ if __name__ == "__main__":
     PFC_G = 6.
     PFC_G_off = 1.5
     learning_rate = 5e-6
-    learning_cycles_per_task = 600//4
     Ntest = 20
     Nblock = 70
     noiseSD = 1e-3
@@ -1147,7 +1147,7 @@ if __name__ == "__main__":
     plotFigs = True#not saveData
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
-    
+    learning_cycles_per_task = pfcmd.trials_per_block
     pfcmd.MDamplification = args_dict['MDamp']
     pfcmd.MDlearningrate = args_dict['MDlr']
     
@@ -1197,3 +1197,4 @@ if __name__ == "__main__":
     plt.show()
     
     # plt.close('all')
+
