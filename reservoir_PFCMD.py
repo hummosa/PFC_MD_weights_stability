@@ -398,7 +398,7 @@ class PFCMD():
                 MDinps[i, :]= MDinp
 
                 if self.useMult:
-                    self.MD2PFCMult = np.dot(self.wMD2PFCMult,MDout)
+                    self.MD2PFCMult = np.dot(self.wMD2PFCMult * self.MDamplification,MDout)
                     if cuda:
                         with torch.no_grad():
                             xadd = (1.+self.MD2PFCMult) * torch.matmul(self.Jrec, torch.Tensor(rout).cuda()).detach().cpu().numpy()
@@ -421,14 +421,16 @@ class PFCMD():
                     self.MDpreTrace += 1./self.tsteps/10. * \
                                         ( -self.MDpreTrace + rout )
                     # wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
-                    wPFC2MDdelta = self.MDlearningrate*np.outer(MDout-0.5,self.MDpreTrace-self.MDlearningBias) # Ali changed from 1e-4 and thresh from 0.13
+                    wPFC2MDdelta = np.outer(MDout-0.5,self.MDpreTrace-self.MDlearningBias) # Ali changed from 1e-4 and thresh from 0.13
+                    fast_delta = self.MDlearningrate*wPFC2MDdelta
+                    slow_delta = 1e-1*self.MDlearningrate*wPFC2MDdelta
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
                     MDrange = self.MDrange #0.05#0.1#0.06
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange , MDrange ) # Ali lowered to 0.01 from 1. 
                     self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange , MDrange ) # lowered from 10.
-                    # self.wMD2PFCMult = np.clip(self.wMD2PFC,-1/self.MDamplification, 2*MDrange /self.G) * self.MDamplification
-                    self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange /self.G, 2*MDrange /self.G) * self.MDamplification
+                    self.wMD2PFCMult = np.clip(self.wMD2PFCMult+ slow_delta.T,-1/self.MDamplification, 2*MDrange /self.G) 
+                    # self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange /self.G, 2*MDrange /self.G) * self.MDamplification
             else:
                 if cuda:
                     with torch.no_grad():  
@@ -956,7 +958,7 @@ class PFCMD():
             # md ampflication and % correct responses from model.
             filename5=os.path.join(dirname, 'values_of_interest.txt')
             with open(filename5, 'a') as f:
-                f.write('{}\t {}\n'.format(self.MDamplification, self.score) )
+                f.write('{}\t {} \t {}\n'.format(self.MDamplification, self.MDlearningrate, self.score) )
 
         ## MDeffect and MDCueOff
         #MSE,_,_ = self.do_test(20,self.MDeffect,True,False,
@@ -1128,8 +1130,8 @@ class PFCMD():
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     group=parser.add_argument("exp_name", default= "_structured_v", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 40., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 6e-6, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("x", default= 2., nargs='?',  type=float, help="arg_1")
+    group=parser.add_argument("y", default= 5e-6, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'exp_name': args.exp_name}
