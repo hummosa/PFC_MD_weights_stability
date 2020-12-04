@@ -77,6 +77,10 @@ class PFCMD():
             self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
             self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
             self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
+<<<<<<< HEAD
+=======
+            self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
+>>>>>>> 49b0fbe8393b139201856700c652d345df07083b
             self.wV_structured  = True      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
@@ -392,8 +396,8 @@ class PFCMD():
                     else: MDout = np.array([0,1])
                     if self.use_context_belief_to_switch_MD and i < self.no_of_trials_with_ofc_signal:
                         #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
-                        # MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
-                        MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
+                        MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                        # MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
 
 
                 MDouts[i,:] = MDout
@@ -908,6 +912,8 @@ class PFCMD():
             if blocki > self.Nblocks - 6:
                 self.use_context_belief_to_switch_MD = True
                 self.no_of_trials_with_ofc_signal = 200//(blocki-self.Nblocks + 6) #decreasing no of instructed trials
+                print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
+                self.hx_of_ofc_signal_lengths.append((blocki, self.no_of_trials_with_ofc_signal))
             cues, routs, outs, MDouts, MDinps, errors = \
                 self.sim_cue(contexti,cuei,cue,target,MDeffect=MDeffect,
                 train=True)
@@ -1139,10 +1145,10 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "_structured_v", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("exp_name", default= "switch_test", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 10., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 5e-5, nargs='?', type=float, help="arg_2")
-    group=parser.add_argument("z", default= 1.7, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("y", default= 1e-40, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("z", default= 1., nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name}
