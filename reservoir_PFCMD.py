@@ -77,10 +77,7 @@ class PFCMD():
             self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
             self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
             self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
-<<<<<<< HEAD
-=======
             self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
->>>>>>> 49b0fbe8393b139201856700c652d345df07083b
             self.wV_structured  = True      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned

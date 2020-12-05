@@ -156,6 +156,10 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
     # ax.set_xlim([0, 2200])
+    
+    for bi, directed_trials in pfcmd.hx_of_ofc_signal_lengths:
+        print(bi*pfcmd.trials_per_block, directed_trials)
+        ax.plot(range(bi*pfcmd.trials_per_block, bi*pfcmd.trials_per_block+ directed_trials), np.ones(directed_trials)*1.1 )
 
     ax = pfcmd.figOuts.add_subplot(312)
     ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    'o', markersize = 1)
