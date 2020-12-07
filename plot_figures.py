@@ -30,37 +30,43 @@ def stats(var, var_name=None):
 def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)', 'wCto0(r) wCto1(b)']):
     PFCrates, MDinputs, MDrates, Outrates, Inputs, Targets, MSEs= rates
     # these tensors are  training_i x tsteps x no_neuron 
-    p = pfcmd.Nsub
+    p = pfcmd.Nsub//2
+    tpb = pfcmd.trials_per_block
     Ntrain = PFCrates[:,:, :5].shape[0]
     yticks = (0, 0.5,1)
     xticks = [0, 1000, 2000]
     pfcmd.figRates, axes = plt.subplots(4,3)#, sharex=True)# , sharey=True)
     pfcmd.figRates.set_size_inches([9,7])
-
     ax = axes[0,0]
     ax.plot(range(Ntrain),np.mean( PFCrates[:,:,:5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','Mean FR')
-    ax.set_title('PFC Cue 1')
+    ax.set_title('PFC Up-V1')
     
     ax = axes[0,1]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p:p+5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','')
-    ax.set_title('PFC Cue 2')
-
+    ax.set_title('PFC Up-V2')
     ax = axes[0,2]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p*2:p*2+5], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False)
     pltu.axes_labels(ax,'','')
-    ax.set_title('PFC Cue 3')
+    ax.set_title('PFC Down-V1')
 
+    ninp = np.array(Inputs)
     ax = axes[1,0]
-    ax.plot(range(Ntrain),np.mean( MDrates[:,:,0], axis=1), '.', markersize =0.5)
+    #plot trials with up cue or down cue with blue or red.
+    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==1.],np.mean( MDrates[:,:,0][ninp[:,0]==1.], axis=1), '.', markersize =0.5, color='tab:blue', label='Up')
+    ax.plot(np.arange(0,Ntrain)[ninp[:,0]==0.],np.mean( MDrates[:,:,0][ninp[:,0]==0.], axis=1), '.', markersize =0.5, color='tab:red',  label='Down')
+    ax.legend()
+    # ax.plot(range(Ntrain),np.mean( MDrates[:,:,0], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','mean FR')
     ax.set_title('MD 0')
-    
+    for ib in range(1, pfcmd.Nblocks,2):
+            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
+
     ax = axes[1,1]
     ax.plot(range(Ntrain),np.mean( MDrates[:,:,1], axis=1), '.', markersize =0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
@@ -72,6 +78,8 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('MD avg inputs')
+    for ib in range(1, pfcmd.Nblocks,2):
+            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
     
     ax = axes[2,0]
     ax.plot(range(Ntrain),np.mean( Outrates[:,:,0], axis=1), '.', markersize =0.5)
@@ -121,17 +129,17 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
 
     pfcmd.score = np.mean(Corrects) * 100. # Add a var that holds the score of the model. % correct response. Later to be outputed as a text file.
 
-    noise = 0.1
+    noise = 0.15
     ax = axes[3,1]
-    ax.plot(Matches  + np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 2)
-    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 2)
+    ax.plot(Matches  + np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 0.5)
+    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 0.5)
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
     # ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
-    ax.set_xlim([0, 2200])
+    # ax.set_xlim([0, 2200])
     
     ax = axes[3,2] # Firing rates distribution
-    print('Shape is: ', PFCrates.shape)
+    # print('Shape is: ', PFCrates.shape)
     ax.hist(PFCrates[900:1000].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
     ax.hist(PFCrates[2000:2100].flatten(), alpha= 0.5) #, 'tab:red') # context 0  
     pltu.axes_labels(ax, 'rates', 'freq')
@@ -147,7 +155,11 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
     ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
-    ax.set_xlim([0, 2200])
+    # ax.set_xlim([0, 2200])
+    
+    for bi, directed_trials in pfcmd.hx_of_ofc_signal_lengths:
+        print(bi*pfcmd.trials_per_block, directed_trials)
+        ax.plot(range(bi*pfcmd.trials_per_block, bi*pfcmd.trials_per_block+ directed_trials), np.ones(directed_trials)*1.1 )
 
     ax = pfcmd.figOuts.add_subplot(312)
     ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    'o', markersize = 1)
@@ -155,7 +167,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
     # ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
-    ax.set_xlim([0, 2200])
+    # ax.set_xlim([0, 2200])
 
     rm = np.convolve(Corrects, np.ones((40,))/40, mode='valid')
     rm2 = running_mean(Corrects, 20)
@@ -172,56 +184,130 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     plt.text(0.01, 0.1, str(pfcmd.args), transform=ax.transAxes)
     pfcmd.figRates
     pfcmd.figRates.tight_layout()
+
+    # PLOT within trial activity for 4 selected trials:
+    trials_to_draw = [0, pfcmd.trials_per_block, int(pfcmd.Nblocks//4*pfcmd.trials_per_block)]
+    pfcmd.figTrials, axes = plt.subplots(5,len(trials_to_draw))#, sharex=True)# , sharey=True)
+    pfcmd.figTrials.set_size_inches([9,3*len(trials_to_draw)])
+    
+    for ti, trial in enumerate(range(len(trials_to_draw))):
+        ax = axes[0,ti]
+        ax.plot(range(200),np.mean( PFCrates[trial,:,:p], axis=1), '-', linewidth=1)
+        ax.plot(range(200), PFCrates[trial,:,:5], '-', linewidth=0.5)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
+        pltu.axes_labels(ax,'','FR')
+        ax.set_title('PFC Up-V1')
+    
+        ax = axes[1,ti]
+        ax.plot(range(200),np.mean( PFCrates[trial,:,p:p*2], axis=1), '-', linewidth=1)
+        ax.plot(range(200), PFCrates[trial,:,p:p+5], '-', linewidth=0.5)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
+        pltu.axes_labels(ax,'','FR')
+        ax.set_title('PFC Up-V2')
+
+        ax = axes[2,ti]
+        ax.plot(range(200),np.mean( PFCrates[trial,:,p*2:p*3], axis=1), '-', linewidth=1)
+        ax.plot(range(200), PFCrates[trial,:,2*p:2*p+5], '-', linewidth=0.5)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
+        pltu.axes_labels(ax,'','FR')
+        ax.set_title('PFC Down-V1')
+
+        ax = axes[3,ti]
+        ax.plot(range(200), MDrates[trial,:,:], '-', linewidth=1, alpha=0.7)
+        ax.plot(range(200), MDinputs[trial,:,:], '-.', linewidth=2, alpha=0.7)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
+        pltu.axes_labels(ax,'','FR')
+        ax.set_title('MD 0 and 1')
+
+        ax = axes[4,ti]
+        ax.plot(range(200), Outrates[trial,:,:], '-', linewidth=1, alpha=0.7)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
+        pltu.axes_labels(ax,'','FR')
+        ax.set_title('Out 0 and 1')
+
+    
     
 
 def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)', 'wCto0(r) wCto1(b)']):
     wOuts, wPFC2MDs, wMD2PFCs, wMD2PFCMults, wJrecs, MDpreTraces = weights
-    xticks = [0, 1000, 2000]
+    xticks = [0, 1000, 2000, 3000, 4000]
     # plot output weights evolution
-    pfcmd.fig3, axes = plt.subplots(4,3)#, sharex=True) #, sharey=True)
+    pfcmd.fig3, axes = plt.subplots(5,3)#, sharex=True) #, sharey=True)
     # pfcmd.fig3.set_figheight = pltu.twocolumnwidth
     # pfcmd.fig3.set_figwidth = pltu.twocolumnwidth
-    pfcmd.fig3.set_size_inches([9,7])
-    p = pfcmd.Nsub
-    for pi, PFC in enumerate(['PFC cue 1', 'PFC cue 2', 'PFC cue 3']):
+    pfcmd.fig3.set_size_inches([9,9])
+    plot_cue_v_subpop = True
+    tpb = pfcmd.trials_per_block
+    if plot_cue_v_subpop:
+        subplot_titles = ['Up-V1', 'Up-V2', 'Down-V1']
+        p = pfcmd.Nsub//2
+    else:
+        subplot_titles = ['PFC cue 1', 'PFC cue 2', 'PFC cue 3']
+        p = pfcmd.Nsub
+    for pi, PFC in enumerate(subplot_titles):
         ax = axes[0,pi]
         ax.plot(wOuts[:,0, p*pi:p*pi+5],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wOuts[:,1, p*pi:p*pi+5],'tab:blue', linewidth= pltu.linewidth)
+        
+        wmean = np.mean(wOuts[:,1,p*pi:p*pi+p], axis=1)
+        wstd = np.mean(wOuts[:,1,p*pi:p*pi+p], axis=1)
+        ax.plot(range(len(wmean)), wmean)
+        ax.fill_between(range(len(wmean)), wmean-wstd, wmean+wstd, alpha=.4)
+
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to Out-0 & 1 (r,b)')
         ax.set_title(PFC)
-        ax.axvspan(600, 1200, alpha=0.2, color='grey')
-        ax.axvspan(1800, 2400, alpha=0.2, color='grey')
+        
+        for ib in range(1, pfcmd.Nblocks,2):
+            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
 
-    for pi, PFC in enumerate(['PFC cue 1', 'PFC cue 2', 'PFC cue 3']):
+    for pi, PFC in enumerate(subplot_titles):
         ax = axes[1,pi]
         ax.plot(wPFC2MDs[:,0, p*pi:p*pi+5],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wPFC2MDs[:,1, p*pi:p*pi+5],'tab:blue', linewidth= pltu.linewidth)
+
+        wmean = np.mean(wPFC2MDs[:,1,p*pi:p*pi+p], axis=1)
+        wstd = np.mean(wPFC2MDs[:,1,p*pi:p*pi+p], axis=1)
+        ax.plot(range(len(wmean)), wmean)
+        ax.fill_between(range(len(wmean)), wmean-wstd, wmean+wstd, alpha=.4)
+
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to MD-0(r) 1(b)')
-        ax.axvspan(600, 1200, alpha=0.2, color='grey')
-        ax.axvspan(1800, 2400, alpha=0.2, color='grey')
+        for ib in range(1, pfcmd.Nblocks,2):
+            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
 
         ax = axes[2,pi]
         ax.plot(wMD2PFCs[:,p*pi:p*pi+5, 0],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wMD2PFCs[:,p*pi:p*pi+5, 1],'tab:blue', linewidth= pltu.linewidth)
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','from MD-0(r) 1(b)')
-        ax.axvspan(600, 1200, alpha=0.2, color='grey')
-        ax.axvspan(1800, 2400, alpha=0.2, color='grey')
+        for ib in range(1, pfcmd.Nblocks,2):
+            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
 
         # plot PFC to MD pre Traces
         ax = axes[3,pi]
-        # ax.plot(MDpreTraces[:,p*pi:p*pi+5], linewidth = pltu.linewidth)
-        # pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
-        # pltu.axes_labels(ax,'Trials','pre')
+        ax.plot(MDpreTraces[:,p*pi:p*pi+5], linewidth = pltu.linewidth)
+        ax.plot(pfcmd.MDlearningBiasFactor*np.mean(MDpreTraces, axis=1), '-.', linewidth = 2)
+        pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
+        pltu.axes_labels(ax,'Trials','pre')
+        for ib in range(1, pfcmd.Nblocks,2):
+            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
     
-    ax = axes [3,pi]
+    ax = axes [4,pi]
     ax.hist(1.+wMD2PFCMults[:,p*pi:p*pi+p, 0].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
     ax.hist(1.+wMD2PFCMults[:,p*pi:p*pi+p, 1].flatten(), alpha=0.4 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
     pltu.axes_labels(ax, 'mul w values', 'freq')
 
+    ax = axes [4,0]
+    ax.hist(MDpreTraces[:,p*0:p*0+p].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    ax.hist(MDpreTraces[:,p*1:p*1+p].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    pltu.axes_labels(ax, 'pop 0', 'freq')
 
+    ax = axes [4,1]
+    ax.hist(MDpreTraces[:,p*1:p*1+p].flatten(), alpha=1. )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    ax.hist(MDpreTraces[:,p*2:p*2+p].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    pltu.axes_labels(ax, 'pop 1 2', 'freq')
+    
     # axes[0,0].plot(wOuts[:,0,:5],'tab:red', linewidth= pltu.linewidth)
     # axes[0,0].plot(wOuts[:,1,:5],'tab:red', linewidth= pltu.linewidth)
     # pltu.beautify_plot(axes[0,0],x0min=False,y0min=False)

@@ -101,6 +101,8 @@ class Network:
         parents = self.parents_conn[model.name]
         for parent in parents:
             parent_model, W_pc, _, _ = parent
+            print('shape xW {}, w_pc{}, neurons{}'.format(xW.shape, W_pc.shape, parent_model.neurons.shape))
+            print('np.dot shape {}'.format(np.dot(W_pc, parent_model.neurons).shape))
             xW += np.dot(W_pc, parent_model.neurons)
         return xW
 

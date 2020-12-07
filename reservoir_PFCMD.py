@@ -7,6 +7,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 # plt.ion()
+# from IPython import embed; embed()
+# import pdb; pdb.set_trace()
 from scipy.io import savemat
 import sys,shelve, tqdm, time
 import plot_utils as pltu
@@ -23,10 +25,11 @@ class PFCMD():
         self.RNGSEED = 1
         np.random.seed([self.RNGSEED])
         self.args = args_dict # dict of args label:value
-        self.Nsub = 200                     # number of neurons per cue
+        self.Nsub = 100                     # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 4                    # number of blocks
+        self.Nblocks = 32                    # number of blocks
+        self.trials_per_block = 600//4
         self.Nmd    = 2                     # number of MD cells.
         self.xorTask = False                # use xor Task or simple 1:1 map task
         # self.xorTask = True               # use xor Task or simple 1:1 map task
@@ -55,13 +58,12 @@ class PFCMD():
         self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
         self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
-        self.MDlearningrate = 1e-4 # 1e-7
-        self.MDlearningBias = 0.14
+        self.MDlearningrate = 5e-6 #1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
+        self.MDrange = 0.1                  # Allowable range for MD-PFC synapses.
+        self.MDlearningBias = 0.3           # threshold for Hebbian learning. Biases pre*post activity.
+        self.MDlearningBiasFactor = 1.6     # Switched dynamic Bias calc based on average, this gets multiplied with running avg resulting in effective bias for hebbian learning.
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
-        #self.MDEffectType = 'subadd'        # MD subtracts from across tasks and adds within task
-        #self.MDEffectType = 'divadd'        # MD divides from across tasks and adds within task
-        #self.MDEffectType = 'divmult'       # MD divides from across tasks and multiplies within task
-
+        
         # OFC
         self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         if self.OFC_reward_hx:
@@ -73,7 +75,10 @@ class PFCMD():
             self.use_context_belief =True  # input routing per current context or per context belief
             self.use_context_belief_to_route_input =False  # input routing per current context or per context belief
             self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
-            self.use_recent_reward_to_pfc_inputs = False  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
+            self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
+            self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
+            self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
+            self.wV_structured  = True      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
@@ -97,7 +102,9 @@ class PFCMD():
         self.blockTrain = False # use different levels of association for multiple blocks training
         
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017
-        self.MDreinforce = True            #  instead of error-driven learning
+        self.MDreinforce = False            #  instead of error-driven learning
+        #Ali mul Hebb trace with perturbampl instead of perturbations themselves, but maybe they both need multplied
+        # because perturbations are funneled through the diff equation, it should be a massive spike to make a difference
                                             
         if self.reinforce:
             self.perturbProb = 50./self.tsteps
@@ -178,14 +185,14 @@ class PFCMD():
             # self.wMD2PFC *= 0.
             # self.wMD2PFCMult *= 0.
             self.wPFC2MD = np.random.normal(size=(self.Nmd, self.Nneur))\
-                            *self.G/np.sqrt(self.Nsub*2)
+                            *self.MDrange #*self.G/np.sqrt(self.Nsub*2)
             self.wPFC2MD -= np.mean(self.wPFC2MD,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFC = np.random.normal(size=(self.Nneur, self.Nmd))\
-                            *self.G/np.sqrt(self.Nsub*2)
+                            *self.MDrange #*self.G/np.sqrt(self.Nsub*2)
             self.wMD2PFC -= np.mean(self.wMD2PFC,axis=1)[:,np.newaxis] # same as res rec, substract mean from each row.
             self.wMD2PFCMult = self.wMD2PFC # Get the exact copy to init mult weights
-            self.initial_norm_wPFC2MD = np.linalg.norm(self.wPFC2MD)
-            self.initial_norm_wMD2PFC = np.linalg.norm(self.wMD2PFC)
+            self.initial_norm_wPFC2MD = np.linalg.norm(self.wPFC2MD) * .6
+            self.initial_norm_wMD2PFC = np.linalg.norm(self.wMD2PFC) * .6
 
         self.MDpreTrace = np.zeros(shape=(self.Nneur))
 
@@ -235,14 +242,26 @@ class PFCMD():
         self.__class__.activation = activation
 
         #wIn = np.random.uniform(-1,1,size=(self.Nneur,self.Ncues))
+        self.wV = np.zeros((self.Nneur,2))
         self.wIn = np.zeros((self.Nneur,self.Ncues))
-        self.cueFactor = 0.75#1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
+        self.cueFactor = 0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
         if self.positiveRates: lowcue,highcue = 0.5,1.
         else: lowcue,highcue = -1.,1
         for cuei in np.arange(self.Ncues):
             self.wIn[self.Nsub*cuei:self.Nsub*(cuei+1),cuei] = \
                     np.random.uniform(lowcue,highcue,size=self.Nsub) \
                             *self.cueFactor
+            if self.wV_structured:
+                self.wV[self.Nsub*cuei:self.Nsub*(cuei)+self.Nsub//2,0] = \
+                        np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
+                                * self.cueFactor
+                self.wV[self.Nsub*(cuei)+self.Nsub//2:self.Nsub*(cuei+1) ,1] = \
+                        np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
+                                * self.cueFactor
+
+            else:
+                self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
+
             if self.wInSpread:
                 # small cross excitation to half the neurons of cue-1 (wrap-around)
                 if cuei == 0: endidx = self.Nneur
@@ -277,7 +296,6 @@ class PFCMD():
         self.data_generator = data_generator(local_Ntrain = 10000)
 
         #Initializing weights here instead
-        self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
         if self.outExternal:
             self.wOut = np.random.uniform(-1,1,
                             size=(self.Nout,self.Nneur))/self.Nneur
@@ -373,16 +391,17 @@ class PFCMD():
                     #  hardcoded for self.Nmd = 2
                     if MDinp[0] > MDinp[1]: MDout = np.array([1,0])
                     else: MDout = np.array([0,1])
-                    if self.use_context_belief_to_switch_MD:
+                    if self.use_context_belief_to_switch_MD and i < self.no_of_trials_with_ofc_signal:
                         #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
                         MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                        # MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
 
 
                 MDouts[i,:] = MDout
                 MDinps[i, :]= MDinp
 
                 if self.useMult:
-                    self.MD2PFCMult = np.dot(self.wMD2PFCMult,MDout)
+                    self.MD2PFCMult = np.dot(self.wMD2PFCMult * self.MDamplification,MDout)
                     if cuda:
                         with torch.no_grad():
                             xadd = (1.+self.MD2PFCMult) * torch.matmul(self.Jrec, torch.Tensor(rout).cuda()).detach().cpu().numpy()
@@ -404,15 +423,19 @@ class PFCMD():
                     #  but syn plasticity just uses pre*post, but not actualy synaptic flow.
                     self.MDpreTrace += 1./self.tsteps/10. * \
                                         ( -self.MDpreTrace + rout )
+                    self.MDlearningBias = self.MDlearningBiasFactor * np.mean(self.MDpreTrace)
+                    
                     # wPFC2MDdelta = 1e-4*np.outer(MDout-0.5,self.MDpreTrace-0.11) # Ali changed from 1e-4 and thresh from 0.13
-                    wPFC2MDdelta = self.MDlearningrate*np.outer(MDout-0.5,self.MDpreTrace-self.MDlearningBias) # Ali changed from 1e-4 and thresh from 0.13
+                    wPFC2MDdelta = np.outer(MDout-0.5,self.MDpreTrace-self.MDlearningBias) # Ali changed from 1e-4 and thresh from 0.13
+                    fast_delta = self.MDlearningrate*wPFC2MDdelta
+                    slow_delta = 1e-1*self.MDlearningrate*wPFC2MDdelta
                     # wPFC2MDdelta *= self.wPFC2MD # modulate it by the weights to get supralinear effects. But it'll actually be sublinear because all values below 1
-                    MDrange = 0.1#0.06
+                    MDrange = self.MDrange #0.05#0.1#0.06
                     MDweightdecay = 1.#0.996
-                    self.wPFC2MD = np.clip(self.wPFC2MD +wPFC2MDdelta,  -MDrange ,MDrange ) # Ali lowered to 0.01 from 1. 
-                    self.wMD2PFC = np.clip(self.wMD2PFC +wPFC2MDdelta.T,-MDrange ,MDrange ) # lowered from 10.
-                    # self.wMD2PFCMult = np.clip(self.wMD2PFC,-1/self.MDamplification, 2*MDrange /self.G) * self.MDamplification
-                    self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange /self.G, 2*MDrange /self.G) * self.MDamplification
+                    self.wPFC2MD = np.clip(self.wPFC2MD +fast_delta,  -MDrange , MDrange ) # Ali lowered to 0.01 from 1. 
+                    self.wMD2PFC = np.clip(self.wMD2PFC +fast_delta.T,-MDrange , MDrange ) # lowered from 10.
+                    # self.wMD2PFCMult = np.clip(self.wMD2PFCMult+ slow_delta.T,-2*MDrange /self.G, 2*MDrange /self.G) 
+                    # self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange /self.G, 2*MDrange /self.G) * self.MDamplification
             else:
                 if cuda:
                     with torch.no_grad():  
@@ -571,10 +594,10 @@ class PFCMD():
             if self.MDreinforce:
                 self.wPFC2MD -= self.learning_rate * \
                         (errorEnd-self.meanErrors[inpi]) * \
-                            HebbTraceMD #* self.meanErrors[inpi]                
+                            HebbTraceMD * 10. # changes too small Ali amplified #* self.meanErrors[inpi]                
                 self.wMD2PFC -= self.learning_rate * \
                         (errorEnd-self.meanErrors[inpi]) * \
-                            HebbTraceMD.T #* self.meanErrors[inpi]                
+                            HebbTraceMD.T * 10. #* self.meanErrors[inpi]                
             if self.dirConn:
                 self.wDir -= self.learning_rate * \
                         (errorEnd-self.meanErrors[inpi]) * \
@@ -882,6 +905,12 @@ class PFCMD():
             if self.debug:
                 print('cue:', cue)
                 print('target:', target)
+            #testing on the last 5 trials
+            if blocki > self.Nblocks - 6:
+                self.use_context_belief_to_switch_MD = True
+                self.no_of_trials_with_ofc_signal = 200//(blocki-self.Nblocks + 6) #decreasing no of instructed trials
+                print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
+                self.hx_of_ofc_signal_lengths.append((blocki, self.no_of_trials_with_ofc_signal))
             cues, routs, outs, MDouts, MDinps, errors = \
                 self.sim_cue(contexti,cuei,cue,target,MDeffect=MDeffect,
                 train=True)
@@ -921,25 +950,28 @@ class PFCMD():
             plot_rates(self, rates)
             #from IPython import embed; embed()
             dirname="results/results_"+self.args['exp_name']+"/"
-            parm_summary= str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])
+            parm_summary= str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])+"_"+str(list(self.args.values())[2])
             if not os.path.exists(dirname):
                     os.makedirs(dirname)
             filename1=os.path.join(dirname, 'fig_weights_{}_{}.png')
             filename2=os.path.join(dirname, 'fig_behavior_{}_{}.png')
             filename3=os.path.join(dirname, 'fig_rates_{}_{}.png')
             filename4=os.path.join(dirname, 'fig_monitored_{}_{}.png')
+            filename5=os.path.join(dirname, 'fig_trials_{}_{}.png')
             self.fig3.savefig    (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figOuts.savefig (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figRates.savefig(filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.fig_monitor = plt.figure()
-            self.monitor.plot(self.fig_monitor, self)
-            self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            if self.debug:
+                self.fig_monitor = plt.figure()
+                self.monitor.plot(self.fig_monitor, self)
+                self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
 
             # output some variables of interest:
             # md ampflication and % correct responses from model.
-            filename5=os.path.join(dirname, 'values_of_interest.txt')
-            with open(filename5, 'a') as f:
-                f.write('{}\t {}\n'.format(self.MDamplification, self.score) )
+            filename6=os.path.join(dirname, 'values_of_interest.txt')
+            with open(filename6, 'a') as f:
+                f.write('{}\t {} \t {} \t {}\n'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'], self.score) )
 
         ## MDeffect and MDCueOff
         #MSE,_,_ = self.do_test(20,self.MDeffect,True,False,
@@ -1110,18 +1142,18 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "_V1_V2_PFC", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 35., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 6., nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("exp_name", default= "switch_test", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("x", default= 10., nargs='?',  type=float, help="arg_1")
+    group=parser.add_argument("y", default= 1e-40, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("z", default= 1., nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
-    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'exp_name': args.exp_name}
+    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name}
     #PFC_G = 1.6                    # if not positiveRates
     #PFC_G = args_dict['PFC_G'] #6.
     PFC_G = 6.
     PFC_G_off = 1.5
     learning_rate = 5e-6
-    learning_cycles_per_task = 600
     Ntest = 20
     Nblock = 70
     noiseSD = 1e-3
@@ -1131,9 +1163,10 @@ if __name__ == "__main__":
     plotFigs = True#not saveData
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
-    
+    learning_cycles_per_task = pfcmd.trials_per_block
     pfcmd.MDamplification = args_dict['MDamp']
     pfcmd.MDlearningrate = args_dict['MDlr']
+    pfcmd.MDlearningBiasFactor = args_dict['MDbf']
     
     if not reLoadWeights:
         t = time.perf_counter()
@@ -1181,3 +1214,4 @@ if __name__ == "__main__":
     plt.show()
     
     # plt.close('all')
+
