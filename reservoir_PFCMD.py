@@ -61,7 +61,7 @@ class PFCMD():
         self.MDlearningrate = 5e-6 #1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
         self.MDrange = 0.1                  # Allowable range for MD-PFC synapses.
         self.MDlearningBias = 0.3           # threshold for Hebbian learning. Biases pre*post activity.
-        self.MDlearningBiasFactor = 1.6     # Switched dynamic Bias calc based on average, this gets multiplied with running avg resulting in effective bias for hebbian learning.
+        self.MDlearningBiasFactor = 1.     # Switched dynamic Bias calc based on average, this gets multiplied with running avg resulting in effective bias for hebbian learning.
         self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
         
         # OFC
@@ -137,7 +137,7 @@ class PFCMD():
 
         if self.MDEffectType == 'submult':
             # working!
-            Gbase = 0.75                      # determines also the cross-task recurrence
+            Gbase = PFC_G#0.75                      # determines also the cross-task recurrence
             if self.MDstrength is None: MDval = 1.
             elif self.MDstrength < 0.: MDval = 0.
             else: MDval = self.MDstrength
@@ -250,7 +250,7 @@ class PFCMD():
         for cuei in np.arange(self.Ncues):
             self.wIn[self.Nsub*cuei:self.Nsub*(cuei+1),cuei] = \
                     np.random.uniform(lowcue,highcue,size=self.Nsub) \
-                            *self.cueFactor
+                            *self.cueFactor * 0.8 # to match that the max diff between v1 v2 is 0.8
             if self.wV_structured:
                 self.wV[self.Nsub*cuei:self.Nsub*(cuei)+self.Nsub//2,0] = \
                         np.random.uniform(lowcue,highcue,size=self.Nsub//2) \
@@ -391,11 +391,18 @@ class PFCMD():
                     #  hardcoded for self.Nmd = 2
                     if MDinp[0] > MDinp[1]: MDout = np.array([1,0])
                     else: MDout = np.array([0,1])
-                    if self.use_context_belief_to_switch_MD and i < self.no_of_trials_with_ofc_signal:
+                    if self.use_context_belief_to_switch_MD and (i < self.no_of_trials_with_ofc_signal):
                         #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
                         MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
                         # MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
 
+                    ########################################################
+                    ########################################################
+                    ########################################################
+                    MDout = np.array([1,0]) #! TODO clammped MD!!!!!!!!!!!!!!!!!!!!!!!!!!!!##
+                    ########################################################
+                    ########################################################
+                    ########################################################
 
                 MDouts[i,:] = MDout
                 MDinps[i, :]= MDinp
@@ -906,9 +913,10 @@ class PFCMD():
                 print('cue:', cue)
                 print('target:', target)
             #testing on the last 5 trials
-            if blocki > self.Nblocks - 6:
-                self.use_context_belief_to_switch_MD = True
-                self.no_of_trials_with_ofc_signal = 200//(blocki-self.Nblocks + 6) #decreasing no of instructed trials
+            lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(1,7)])) )
+            if (blocki > self.Nblocks - 6) and (traini%blocki ==0):
+                self.use_context_belief_to_switch_MD = False
+                self.no_of_trials_with_ofc_signal = lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
                 self.hx_of_ofc_signal_lengths.append((blocki, self.no_of_trials_with_ofc_signal))
             cues, routs, outs, MDouts, MDinps, errors = \
@@ -1150,8 +1158,8 @@ if __name__ == "__main__":
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name}
     #PFC_G = 1.6                    # if not positiveRates
-    #PFC_G = args_dict['PFC_G'] #6.
-    PFC_G = 6.
+    PFC_G = args_dict['MDamp'] #6.
+    # PFC_G = 6.
     PFC_G_off = 1.5
     learning_rate = 5e-6
     Ntest = 20
@@ -1164,7 +1172,7 @@ if __name__ == "__main__":
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
     learning_cycles_per_task = pfcmd.trials_per_block
-    pfcmd.MDamplification = args_dict['MDamp']
+    # pfcmd.MDamplification = args_dict['MDamp']
     pfcmd.MDlearningrate = args_dict['MDlr']
     pfcmd.MDlearningBiasFactor = args_dict['MDbf']
     

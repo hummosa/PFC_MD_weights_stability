@@ -127,7 +127,10 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     Responses= 1.* (out_higher_mean == Inputs[:,0]) * 0.8 + 0.1     #+ np.random.uniform(-noise, noise, size=(Ntrain,) )
     Corrects = 1. * (Targets[:,0] == out_higher_mean)
 
-    pfcmd.score = np.mean(Corrects) * 100. # Add a var that holds the score of the model. % correct response. Later to be outputed as a text file.
+    stages = 3
+    Nstage = len(Corrects)//stages
+    pfcmd.score =  [np.mean(Corrects[istage*Nstage:(istage+1)*Nstage])* 100. for istage in range(stages)]  # score binnged into stages
+    pfcmd.score.append(np.mean(Corrects) * 100. )   # Add a var that holds the score of the model. % correct response. Later to be outputed as a text file.
 
     noise = 0.15
     ax = axes[3,1]
@@ -140,8 +143,8 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     
     ax = axes[3,2] # Firing rates distribution
     # print('Shape is: ', PFCrates.shape)
-    ax.hist(PFCrates[900:1000].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
-    ax.hist(PFCrates[2000:2100].flatten(), alpha= 0.5) #, 'tab:red') # context 0  
+    ax.hist(PFCrates[900:1000].flatten(), alpha=0.7 )   #, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    ax.hist(PFCrates[2000:2100].flatten(), alpha= 0.5)  #, 'tab:red') # context 0  
     pltu.axes_labels(ax, 'rates', 'freq')
 
 
@@ -304,9 +307,8 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
     pltu.axes_labels(ax, 'pop 0', 'freq')
 
     ax = axes [4,1]
-    ax.hist(MDpreTraces[:,p*1:p*1+p].flatten(), alpha=1. )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
-    ax.hist(MDpreTraces[:,p*2:p*2+p].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
-    pltu.axes_labels(ax, 'pop 1 2', 'freq')
+    ax.hist(wOuts[:,:].flatten(), 50, alpha=1. )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
+    pltu.axes_labels(ax, 'w outs', 'freq')
     
     # axes[0,0].plot(wOuts[:,0,:5],'tab:red', linewidth= pltu.linewidth)
     # axes[0,0].plot(wOuts[:,1,:5],'tab:red', linewidth= pltu.linewidth)
