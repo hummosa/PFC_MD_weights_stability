@@ -399,7 +399,7 @@ class PFCMD():
                     ########################################################
                     ########################################################
                     ########################################################
-                    MDout = np.array([1,0]) #! TODO clammped MD!!!!!!!!!!!!!!!!!!!!!!!!!!!!##
+                    # MDout = np.array([1,0]) #! TODO clammped MD!!!!!!!!!!!!!!!!!!!!!!!!!!!!##
                     ########################################################
                     ########################################################
                     ########################################################
@@ -913,9 +913,9 @@ class PFCMD():
                 print('cue:', cue)
                 print('target:', target)
             #testing on the last 5 trials
-            lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(1,7)])) )
+            lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(7, 1, -1)])) )
             if (blocki > self.Nblocks - 6) and (traini%blocki ==0):
-                self.use_context_belief_to_switch_MD = False
+                self.use_context_belief_to_switch_MD = True
                 self.no_of_trials_with_ofc_signal = lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
                 self.hx_of_ofc_signal_lengths.append((blocki, self.no_of_trials_with_ofc_signal))
@@ -957,7 +957,7 @@ class PFCMD():
             plot_weights(self, weights)
             plot_rates(self, rates)
             #from IPython import embed; embed()
-            dirname="results/results_"+self.args['exp_name']+"/"
+            dirname="results/"+self.args['exp_name']+"/"
             parm_summary= str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])+"_"+str(list(self.args.values())[2])
             if not os.path.exists(dirname):
                     os.makedirs(dirname)
@@ -969,8 +969,8 @@ class PFCMD():
             self.fig3.savefig    (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figOuts.savefig (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figRates.savefig(filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             if self.debug:
+                self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
                 self.fig_monitor = plt.figure()
                 self.monitor.plot(self.fig_monitor, self)
                 self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
@@ -979,7 +979,7 @@ class PFCMD():
             # md ampflication and % correct responses from model.
             filename6=os.path.join(dirname, 'values_of_interest.txt')
             with open(filename6, 'a') as f:
-                f.write('{}\t {} \t {} \t {}\n'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'], self.score) )
+                f.write('{}\t {} \t {} \t {}\t {}\n'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'], self.score[-1], self.score[:-1]) )
 
         ## MDeffect and MDCueOff
         #MSE,_,_ = self.do_test(20,self.MDeffect,True,False,
@@ -1158,8 +1158,8 @@ if __name__ == "__main__":
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name}
     #PFC_G = 1.6                    # if not positiveRates
-    PFC_G = args_dict['MDamp'] #6.
-    # PFC_G = 6.
+    # PFC_G = args_dict['MDamp'] #6.
+    PFC_G = 0.75 # used to be 6. and did nothing to the model. Now I pass its value to Gbase which does influence jrec
     PFC_G_off = 1.5
     learning_rate = 5e-6
     Ntest = 20
@@ -1172,7 +1172,7 @@ if __name__ == "__main__":
     pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
     learning_cycles_per_task = pfcmd.trials_per_block
-    # pfcmd.MDamplification = args_dict['MDamp']
+    pfcmd.MDamplification = args_dict['MDamp']
     pfcmd.MDlearningrate = args_dict['MDlr']
     pfcmd.MDlearningBiasFactor = args_dict['MDbf']
     
