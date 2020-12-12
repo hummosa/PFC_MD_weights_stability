@@ -18,6 +18,10 @@ import argparse
 cuda = False
 if cuda: import torch
 
+from refactor.ofc_mle import OFC
+ofc = OFC()
+ofc.set_context("0.7")
+
 class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
@@ -28,8 +32,8 @@ class PFCMD():
         self.Nsub = 100                     # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 32                    # number of blocks
-        self.trials_per_block = 600//4
+        self.Nblocks = 5                    # number of blocks
+        self.trials_per_block = 500
         self.Nmd    = 2                     # number of MD cells.
         self.xorTask = False                # use xor Task or simple 1:1 map task
         # self.xorTask = True               # use xor Task or simple 1:1 map task
@@ -382,7 +386,6 @@ class PFCMD():
                 if self.MDstrength is not None:
                     MDout = np.zeros(self.Nmd)
                     # MDout[contexti] = 1. # No longer feeding context information directly to MD
-                else:
                     MDout = (np.tanh( (MDinp-self.MDthreshold)/0.1 ) + 1) / 2.
                 # if MDlearn then force "winner take all" on MD output
                 if train and self.MDlearn:
@@ -391,7 +394,7 @@ class PFCMD():
                     #  hardcoded for self.Nmd = 2
                     if MDinp[0] > MDinp[1]: MDout = np.array([1,0])
                     else: MDout = np.array([0,1])
-                    if self.use_context_belief_to_switch_MD and (i < self.no_of_trials_with_ofc_signal):
+                    if self.use_context_belief_to_switch_MD: 
                         #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
                         MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
                         # MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
@@ -440,7 +443,7 @@ class PFCMD():
                     MDrange = self.MDrange #0.05#0.1#0.06
                     MDweightdecay = 1.#0.996
                     self.wPFC2MD = np.clip(self.wPFC2MD +fast_delta,  -MDrange , MDrange ) # Ali lowered to 0.01 from 1. 
-                    self.wMD2PFC = np.clip(self.wMD2PFC +fast_delta.T,-MDrange , MDrange ) # lowered from 10.
+                    # self.wMD2PFC = np.clip(self.wMD2PFC +fast_delta.T,-MDrange , MDrange ) # lowered from 10.
                     # self.wMD2PFCMult = np.clip(self.wMD2PFCMult+ slow_delta.T,-2*MDrange /self.G, 2*MDrange /self.G) 
                     # self.wMD2PFCMult = np.clip(self.wMD2PFC,-2*MDrange /self.G, 2*MDrange /self.G) * self.MDamplification
             else:
@@ -914,9 +917,9 @@ class PFCMD():
                 print('target:', target)
             #testing on the last 5 trials
             lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(7, 1, -1)])) )
-            if (blocki > self.Nblocks - 6) and (traini%blocki ==0):
+            if (blocki > self.Nblocks - 2) and (traini%blocki ==0):
                 self.use_context_belief_to_switch_MD = True
-                self.no_of_trials_with_ofc_signal = lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
+                self.no_of_trials_with_ofc_signal = 50 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
                 self.hx_of_ofc_signal_lengths.append((blocki, self.no_of_trials_with_ofc_signal))
             cues, routs, outs, MDouts, MDinps, errors = \
@@ -956,6 +959,7 @@ class PFCMD():
             rates =  [PFCrates, MDinputs, MDrates, Outrates, Inputs, Targets, MSEs]
             plot_weights(self, weights)
             plot_rates(self, rates)
+            plot_what_i_want(self, weights, rates)
             #from IPython import embed; embed()
             dirname="results/"+self.args['exp_name']+"/"
             parm_summary= str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])+"_"+str(list(self.args.values())[2])
@@ -966,9 +970,11 @@ class PFCMD():
             filename3=os.path.join(dirname, 'fig_rates_{}_{}.png')
             filename4=os.path.join(dirname, 'fig_monitored_{}_{}.png')
             filename5=os.path.join(dirname, 'fig_trials_{}_{}.png')
-            self.fig3.savefig    (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.figOuts.savefig (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.figRates.savefig(filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            filename6=os.path.join(dirname, 'fig_custom_{}_{}.png')
+            self.fig3.savefig     (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.figOuts.savefig  (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.figRates.savefig (filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.figCustom.savefig(filename6.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             if self.debug:
                 self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
                 self.fig_monitor = plt.figure()
@@ -977,10 +983,12 @@ class PFCMD():
 
             # output some variables of interest:
             # md ampflication and % correct responses from model.
-            filename6=os.path.join(dirname, 'values_of_interest.txt')
-            with open(filename6, 'a') as f:
-                f.write('{}\t {} \t {} \t {}\t {}\n'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'], self.score[-1], self.score[:-1]) )
-
+            filename7=os.path.join(dirname, 'values_of_interest.txt')
+            with open(filename7, 'a') as f:
+                f.write('{:.2f}\t {:.2e} \t {:.2f} \t'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'] ))
+                for score in self.score:
+                    f.write('{:.2f}\t'.format(score)) 
+                f.write('\n')
         ## MDeffect and MDCueOff
         #MSE,_,_ = self.do_test(20,self.MDeffect,True,False,
         #                        self.get_cue_list(),None,2)
@@ -1151,7 +1159,7 @@ class PFCMD():
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     group=parser.add_argument("exp_name", default= "switch_test", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 10., nargs='?',  type=float, help="arg_1")
+    group=parser.add_argument("x", default= 30., nargs='?',  type=float, help="arg_1")
     group=parser.add_argument("y", default= 1e-40, nargs='?', type=float, help="arg_2")
     group=parser.add_argument("z", default= 1., nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
