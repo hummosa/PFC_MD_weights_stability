@@ -18,8 +18,8 @@ import argparse
 cuda = False
 if cuda: import torch
 
-from refactor.ofc_mle import OFC
-ofc = OFC()
+from refactor.ofc_mle import OFC, OFC_dumb
+ofc = OFC_dumb(horizon=40)
 ofc.set_context("0.7")
 
 class PFCMD():
@@ -77,6 +77,7 @@ class PFCMD():
             self.recent_error_history = []  # List to keep track of entire error history
             self.decayRewardPerTrial = 0.1 # NOT in use yet  # how to decay the mean reward by, per trial
             self.use_context_belief =True  # input routing per current context or per context belief
+            self.get_v1_v2_from_ofc = False # 
             self.use_context_belief_to_route_input =False  # input routing per current context or per context belief
             self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
             self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
@@ -396,8 +397,8 @@ class PFCMD():
                     else: MDout = np.array([0,1])
                     if self.use_context_belief_to_switch_MD: 
                         #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
-                        MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
-                        # MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
+                        # MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                        MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
 
                     ########################################################
                     ########################################################
@@ -650,6 +651,11 @@ class PFCMD():
                 self.recent_error = self.meanErrors # TODO temporarily not using context belief
                 # I start with match context 0.9. So match startegy would have 0.1 error
                 self.recent_error = np.array([0.1, 0.9]) if inpi==0 else np.array([0.9, 0.1])
+                if self.get_v1_v2_from_ofc: 
+                    self.recent_error = np.array(ofc.get_v() ) 
+
+            ofc.update_v(cue[:2], out, target)
+
 
         if train and self.outExternal:
             self.wOut *= self.wOutMask
@@ -917,8 +923,9 @@ class PFCMD():
                 print('target:', target)
             #testing on the last 5 trials
             lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(7, 1, -1)])) )
-            if (blocki > self.Nblocks - 2) and (traini%blocki ==0):
-                self.use_context_belief_to_switch_MD = True
+            if (blocki > self.Nblocks - 3) and (traini%blocki ==0):
+                # self.use_context_belief_to_switch_MD = True
+                self.get_v1_v2_from_ofc = True
                 self.no_of_trials_with_ofc_signal = 50 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
                 self.hx_of_ofc_signal_lengths.append((blocki, self.no_of_trials_with_ofc_signal))
@@ -974,12 +981,12 @@ class PFCMD():
             self.fig3.savefig     (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figOuts.savefig  (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figRates.savefig (filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.figCustom.savefig(filename6.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             if self.debug:
+                self.figCustom.savefig(filename6.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
                 self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-                self.fig_monitor = plt.figure()
-                self.monitor.plot(self.fig_monitor, self)
-                self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.fig_monitor = plt.figure()
+            self.monitor.plot(self.fig_monitor, self)
+            self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
 
             # output some variables of interest:
             # md ampflication and % correct responses from model.
@@ -1159,8 +1166,8 @@ class PFCMD():
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     group=parser.add_argument("exp_name", default= "switch_test", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 30., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 1e-40, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("x", default= 20., nargs='?',  type=float, help="arg_1")
+    group=parser.add_argument("y", default= 5e-5, nargs='?', type=float, help="arg_2")
     group=parser.add_argument("z", default= 1., nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
