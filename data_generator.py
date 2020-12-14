@@ -2,20 +2,28 @@ import numpy as np
 
 class data_generator():
     def __init__(self, local_Ntrain):
-        self.matches = { #cause a non-match (1.) every so many matches.
-        '90': np.array([0. if (i+1)%10!=0 else 1. for i in range(local_Ntrain) ]),
-        '75': np.array([0. if (i+1)%4!=0  else 1. for i in range(local_Ntrain)  ]),
-        '50': np.array([0. if (i+1)%2!=0  else 1. for i in range(local_Ntrain)  ]),
-        '25': np.array([1. if (i+1)%4!=0  else 0. for i in range(local_Ntrain)  ]),
-        '10': np.array([1. if (i+1)%10!=0 else 0. for i in range(local_Ntrain) ]),
+        # self.non_matches = { #cause a non-match (1.) every so many matches.
+        # '90': np.array([0. if (i+1)%10!=0 else 1. for i in range(local_Ntrain) ]),
+        # '75': np.array([0. if (i+1)%4!=0  else 1. for i in range(local_Ntrain)  ]),
+        # '50': np.array([0. if (i+1)%2!=0  else 1. for i in range(local_Ntrain)  ]),
+        # '25': np.array([1. if (i+1)%4!=0  else 0. for i in range(local_Ntrain)  ]),
+        # '10': np.array([1. if (i+1)%10!=0 else 0. for i in range(local_Ntrain) ]),
+        #  }
+
+        self.non_matches = { # randomly sample non-matches (1.) with set probabilities
+        '90': np.array([0. if np.random.rand()<0.9 else 1. for i in range(local_Ntrain) ]),
+        '75': np.array([0. if np.random.rand()<0.7 else 1. for i in range(local_Ntrain)  ]),
+        '50': np.array([0. if np.random.rand()<0.5 else 1. for i in range(local_Ntrain)  ]),
+        '25': np.array([1. if np.random.rand()<0.7 else 0. for i in range(local_Ntrain)  ]),
+        '10': np.array([1. if np.random.rand()<0.9 else 0. for i in range(local_Ntrain) ]),
          }
 
         self.task_data_gen = {
-        0: self.trial_generator(self.matches['90']),
-        1: self.trial_generator(self.matches['10']),
-        2: self.trial_generator(self.matches['50']),
-        3: self.trial_generator(self.matches['25']),
-        4: self.trial_generator(self.matches['75']),
+        0: self.trial_generator(self.non_matches['90']),
+        1: self.trial_generator(self.non_matches['10']),
+        2: self.trial_generator(self.non_matches['50']),
+        3: self.trial_generator(self.non_matches['25']),
+        4: self.trial_generator(self.non_matches['75']),
         }
 
     def trial_generator(self, non_matches):

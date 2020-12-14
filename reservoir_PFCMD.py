@@ -83,7 +83,7 @@ class PFCMD():
             self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
             self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
             self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
-            self.wV_structured  = True      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
+            self.wV_structured  = False      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
@@ -265,7 +265,9 @@ class PFCMD():
                                 * self.cueFactor
 
             else:
-                self.wV = np.random.normal(size=(self.Nneur, 2 )) *self.cueFactor # weights of value input to pfc
+                input_variance = 1.
+                self.wV = np.random.normal(size=(self.Nneur, 2 ), loc=(lowcue+highcue)/2, scale=input_variance) *self.cueFactor # weights of value input to pfc
+                self.wIn = np.random.normal(size=(self.Neuro, self.Ncues), loc=(lowcue+highcue)/2, scale=input_variance) *self.cueFactor 
 
             if self.wInSpread:
                 # small cross excitation to half the neurons of cue-1 (wrap-around)
@@ -982,9 +984,9 @@ class PFCMD():
             self.figOuts.savefig  (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figRates.savefig (filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             if self.debug:
+                self.fig_monitor = plt.figure()
                 self.figCustom.savefig(filename6.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
                 self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.fig_monitor = plt.figure()
             self.monitor.plot(self.fig_monitor, self)
             self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
 
@@ -1232,22 +1234,22 @@ if __name__ == "__main__":
     # move_figure(figs[6],col=4, position='top')
 
     #Second seed
-    args_dict['seed']= 2
-    pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
-                    noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
-    pfcmd.MDamplification = args_dict['MDamp']
-    pfcmd.MDlearningrate = args_dict['MDlr']
-    pfcmd.MDlearningBiasFactor = args_dict['MDbf']
+    # args_dict['seed']= 2
+    # pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
+    #                 noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
+    # pfcmd.MDamplification = args_dict['MDamp']
+    # pfcmd.MDlearningrate = args_dict['MDlr']
+    # pfcmd.MDlearningBiasFactor = args_dict['MDbf']
 
-    pfcmd.train(learning_cycles_per_task)
+    # pfcmd.train(learning_cycles_per_task)
 
-    #THird run
-    args_dict['seed']= 3
-    pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
-                    noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
-    pfcmd.MDamplification = args_dict['MDamp']
-    pfcmd.MDlearningrate = args_dict['MDlr']
-    pfcmd.MDlearningBiasFactor = args_dict['MDbf']
+    # #THird run
+    # args_dict['seed']= 3
+    # pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
+    #                 noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
+    # pfcmd.MDamplification = args_dict['MDamp']
+    # pfcmd.MDlearningrate = args_dict['MDlr']
+    # pfcmd.MDlearningBiasFactor = args_dict['MDbf']
 
     pfcmd.train(learning_cycles_per_task)
 
