@@ -26,7 +26,7 @@ class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
         self.debug = False
-        self.RNGSEED = 1
+        self.RNGSEED = args_dict['seed'] #1
         np.random.seed([self.RNGSEED])
         self.args = args_dict # dict of args label:value
         self.Nsub = 100                     # number of neurons per cue
@@ -1171,7 +1171,7 @@ if __name__ == "__main__":
     group=parser.add_argument("z", default= 1., nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
-    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name}
+    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name, 'seed': 1}
     #PFC_G = 1.6                    # if not positiveRates
     # PFC_G = args_dict['MDamp'] #6.
     PFC_G = 0.75 # used to be 6. and did nothing to the model. Now I pass its value to Gbase which does influence jrec
@@ -1230,6 +1230,27 @@ if __name__ == "__main__":
     # move_figure(figs[3],col=4, position='top')
     # move_figure(figs[4],col=3, position='bottom')
     # move_figure(figs[6],col=4, position='top')
+
+    #Second seed
+    args_dict['seed']= 2
+    pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
+                    noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
+    pfcmd.MDamplification = args_dict['MDamp']
+    pfcmd.MDlearningrate = args_dict['MDlr']
+    pfcmd.MDlearningBiasFactor = args_dict['MDbf']
+
+    pfcmd.train(learning_cycles_per_task)
+
+    #THird run
+    args_dict['seed']= 3
+    pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
+                    noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
+    pfcmd.MDamplification = args_dict['MDamp']
+    pfcmd.MDlearningrate = args_dict['MDlr']
+    pfcmd.MDlearningBiasFactor = args_dict['MDbf']
+
+    pfcmd.train(learning_cycles_per_task)
+
 
     if pfcmd.saveData:
         pfcmd.fileDict.close()
