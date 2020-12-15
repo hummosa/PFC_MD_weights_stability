@@ -60,7 +60,7 @@ class OFC_dumb:
         if len(self.trial_history) > self.horizon: self.trial_history = self.trial_history[-self.horizon:]
 
         likelihood = list(map(lambda trial_type:
-                              np.array([0.45, 0.55]) if trial_type == "MATCH" else np.array([0.55, 0.45]), self.trial_history))
+                              np.array([0.45, 0.55]) if trial_type is "MATCH" else np.array([0.55, 0.45]), self.trial_history))
                             #   np.array([0.55, 0.45]) if trial_type == "MATCH" else np.array([0.45, 0.55]), self.trial_history))
         likelihood = np.prod(np.array(likelihood), axis=0)
         posterior = (likelihood * np.array([0.5, 0.5])) / np.sum(likelihood * np.array([0.5, 0.5]))
