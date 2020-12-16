@@ -25,7 +25,7 @@ if cuda:
 
 # ofc = OFC_dumb(horizon=40)
 ofc = OFC()
-ofc.set_context("0.7")
+ofc.set_context(0.1)
 
 
 class PFCMD():
@@ -37,6 +37,7 @@ class PFCMD():
             "cue": np.array([[0, 0]]),
             "target": np.array([[0, 0]])
         }
+        self.ofc_calls = 0
 
         self.debug = False
         self.RNGSEED = args_dict['seed']  # 1
@@ -739,8 +740,8 @@ class PFCMD():
                 if self.get_v1_v2_from_ofc:
                     self.recent_error = np.array(ofc.get_v())
 
-
             # NOTE: Sabrina -- exploring OFC stuff
+            self.ofc_calls += 1
             ofc.update_v(cue[:2], out, target)
             self.ofc_history.append(self.recent_error[0])
 
@@ -836,6 +837,7 @@ class PFCMD():
             Ntrain = Ntrain*self.Nblocks + Nextra
         else:
             Ntrain *= self.Nblocks
+
         wOuts = np.zeros(shape=(Ntrain, self.Nout, self.Nneur))
         if self.MDlearn:
             wPFC2MDs = np.zeros(shape=(Ntrain, 2, self.Nneur))
@@ -967,6 +969,7 @@ class PFCMD():
             self.fig_ofc.savefig(filename7.format(parm_summary, time.strftime(
                 "%Y%m%d-%H%M%S")), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             np.save('cues_targets.npy', self.save_vals)
+            print("Calls to ofc.update_v:", self.ofc_calls)
 
             if self.debug:
                 self.figCustom.savefig(filename6.format(parm_summary, time.strftime(

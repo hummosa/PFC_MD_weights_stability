@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 class OFC:
-    ASSOCIATION_RANGE = np.linspace(0, 1, 21)
+    ASSOCIATION_RANGE = np.linspace(0, 1, 41)
 
     def __init__(self):
         self.contexts = {}
@@ -21,11 +21,17 @@ class OFC:
             return np.array([v1, v2])
 
     def set_context(self, ctx):
-        self.contexts[self.ctx] = self.prior
+        self.contexts[str(self.ctx)] = self.prior
 
-        if (ctx in self.contexts):
-            self.prior = self.contexts[ctx]
+        if (str(ctx) in self.contexts):
+            self.prior = self.contexts[str(ctx)]
         else:
+            # NOTE: Prior 1 -- binominal
+            # n = len(self.ASSOCIATION_RANGE)
+            # p = ctx
+            # self.prior = np.array([binom.pmf(k, n, p) for k in range(n)])
+
+            # NOTE: Prior 2 -- uniform
             n = len(self.ASSOCIATION_RANGE)
             self.prior = np.ones(n) / n  # Assume a uniform prior
         self.ctx = ctx
