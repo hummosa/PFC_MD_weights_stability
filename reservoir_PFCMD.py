@@ -722,142 +722,6 @@ class PFCMD():
 
         return cue, target
 
-    def plot_column(self,fig,cues,routs,MDouts,outs,ploti=0):
-        print('Plotting ...')
-        cols=4
-        if ploti==0:
-            yticks = (0,1)
-            ylabels=('Cues','PFC for cueA','PFC for cueB',
-                        'PFC for cueC','PFC for cueD','PFC for rest',
-                        'MD 1,2','Output 1,2')
-        else:
-            yticks = ()
-            ylabels=('','','','','','','','')
-        ax = fig.add_subplot(8,cols,1+ploti)
-        ax.plot(cues,linewidth=pltu.plot_linewidth)
-        ax.set_ylim([-0.1,1.1])
-        pltu.beautify_plot(ax,x0min=False,y0min=False,
-                xticks=(),yticks=yticks)
-        pltu.axes_labels(ax,'',ylabels[0])
-        ax = fig.add_subplot(8,cols,cols+1+ploti)
-        ax.plot(routs[:,:10],linewidth=pltu.plot_linewidth)
-        ax.set_ylim([-0.1,1.1])
-        pltu.beautify_plot(ax,x0min=False,y0min=False,
-                xticks=(),yticks=yticks)
-        pltu.axes_labels(ax,'',ylabels[1])
-        ax = fig.add_subplot(8,cols,cols*2+1+ploti)
-        ax.plot(routs[:,self.Nsub:self.Nsub+10],
-                    linewidth=pltu.plot_linewidth)
-        ax.set_ylim([-0.1,1.1])
-        pltu.beautify_plot(ax,x0min=False,y0min=False,
-                xticks=(),yticks=yticks)
-        pltu.axes_labels(ax,'',ylabels[2])
-        if self.Ncues > 2:
-            ax = fig.add_subplot(8,cols,cols*3+1+ploti)
-            ax.plot(routs[:,self.Nsub*2:self.Nsub*2+10],
-                        linewidth=pltu.plot_linewidth)
-            ax.set_ylim([-0.1,1.1])
-            pltu.beautify_plot(ax,x0min=False,y0min=False,
-                    xticks=(),yticks=yticks)
-            pltu.axes_labels(ax,'',ylabels[3])
-            ax = fig.add_subplot(8,cols,cols*4+1+ploti)
-            ax.plot(routs[:,self.Nsub*3:self.Nsub*3+10],
-                        linewidth=pltu.plot_linewidth)
-            ax.set_ylim([-0.1,1.1])
-            pltu.beautify_plot(ax,x0min=False,y0min=False,
-                    xticks=(),yticks=yticks)
-            pltu.axes_labels(ax,'',ylabels[4])
-            ax = fig.add_subplot(8,cols,cols*5+1+ploti)
-            ax.plot(routs[:,self.Nsub*4:self.Nsub*4+10],
-                        linewidth=pltu.plot_linewidth)
-            ax.set_ylim([-0.1,1.1])
-            pltu.beautify_plot(ax,x0min=False,y0min=False,
-                    xticks=(),yticks=yticks)
-            pltu.axes_labels(ax,'',ylabels[5])
-        ax = fig.add_subplot(8,cols,cols*6+1+ploti)
-        ax.plot(MDouts,linewidth=pltu.plot_linewidth)
-        ax.set_ylim([-0.1,1.1])
-        pltu.beautify_plot(ax,x0min=False,y0min=False,
-                xticks=(),yticks=yticks)
-        pltu.axes_labels(ax,'',ylabels[6])
-        ax = fig.add_subplot(8,cols,cols*7+1+ploti)
-        ax.plot(outs,linewidth=pltu.plot_linewidth)
-        ax.set_ylim([-0.1,1.1])
-        pltu.beautify_plot(ax,x0min=False,y0min=False,
-                xticks=[0,self.tsteps],yticks=yticks)
-        pltu.axes_labels(ax,'time (ms)',ylabels[7])
-        fig.tight_layout()
-        
-        if self.saveData:
-            d = {}
-            # 1st column of all matrices is number of time steps
-            # 2nd column is number of neurons / units
-            d['cues'] = cues                # tsteps x 4
-            d['routs'] = routs              # tsteps x 1000
-            d['MDouts'] = MDouts            # tsteps x 2
-            d['outs'] = outs                # tsteps x 2
-            savemat('simData'+str(ploti), d)
-        
-        return ax
-
-    def performance(self,cuei,outs,errors,target):
-        meanErr = np.mean(errors[-100:,:]*errors[-100:,:])
-        # endout is the mean of all end 100 time points for each output
-        endout = np.mean(outs[-100:,:],axis=0)
-        targeti = 0 if target[0]>target[1] else 1
-        non_targeti = 1 if target[0]>target[1] else 0
-        ## endout for targeti output must be greater than for the other
-        ##  with a margin of 50% of desired difference of 1. between the two
-        #if endout[targeti] > (endout[non_targeti]+0.5): correct = 1
-        #else: correct = 0
-        # just store the margin of error instead of thresholding it
-        correct = endout[targeti] - endout[non_targeti]
-        return meanErr, correct
-
-    def do_test(self,Ntest,MDeffect,MDCueOff,MDDelayOff,
-                    cueList,cuePlot,colNum,train=True):
-        NcuesTest = len(cueList)
-        MSEs = np.zeros(Ntest*NcuesTest)
-        corrects = np.zeros(Ntest*NcuesTest)
-        wOuts = np.zeros((Ntest,self.Nout,self.Nneur))
-        self.meanAct = np.zeros(shape=(self.Ncontexts*self.inpsPerContext,\
-                                        self.tsteps,self.Nneur))
-        for testi in range(Ntest):
-            if self.plotFigs: print(('Simulating test cycle',testi))
-            cues_order = self.get_cues_order(cueList)
-            for cuenum,(contexti,cuei) in enumerate(cues_order):
-                cue, target = self.get_cue_target(contexti,cuei)
-                cues, routs, outs, MDouts, MDinps, errors = \
-                    self.sim_cue(contexti,cuei,cue,target,
-                            MDeffect,MDCueOff,MDDelayOff,train=train)
-                MSEs[testi*NcuesTest+cuenum], corrects[testi*NcuesTest+cuenum] = \
-                    self.performance(cuei,outs,errors,target)
-
-                if cuePlot is not None:
-                    if self.plotFigs and testi == 0 and contexti==cuePlot[0] and cuei==cuePlot[1]:
-                        ax = self.plot_column(self.fig,cues,routs,MDouts,outs,ploti=colNum)
-
-            if self.outExternal:
-                wOuts[testi,:,:] = self.wOut
-
-        self.meanAct /= Ntest
-        if self.plotFigs and cuePlot is not None:
-            ax.text(0.1,0.4,'{:1.2f}$\pm${:1.2f}'.format(np.mean(corrects),np.std(corrects)),
-                        transform=ax.transAxes)
-            ax.text(0.1,0.25,'{:1.2f}$\pm${:1.2f}'.format(np.mean(MSEs),np.std(MSEs)),
-                        transform=ax.transAxes)
-
-        if self.saveData:
-            # 1-Dim: numCycles * 4 cues/cycle i.e. 70*4=280
-            self.fileDict['corrects'+str(colNum)] = corrects
-            # at each cycle, a weights matrix 2x1000:
-            # weights to 2 output neurons from 1000 cue-selective neurons
-            # 3-Dim: 70 (numCycles) x 2 x 1000
-            self.fileDict['wOuts'+str(colNum)] = wOuts
-            #savemat('simDataTrials'+str(colNum), d)
-        
-        return MSEs,corrects,wOuts
-
     def get_cue_list(self,contexti=None):
         if contexti is not None:
             # (contexti,cuei) combinations for one given contexti
@@ -1001,141 +865,7 @@ class PFCMD():
                 for score in self.score:
                     f.write('{:.2f}\t'.format(score)) 
                 f.write('\n')
-        ## MDeffect and MDCueOff
-        #MSE,_,_ = self.do_test(20,self.MDeffect,True,False,
-        #                        self.get_cue_list(),None,2)
 
-        #return np.mean(MSE)
-
-    def taskSwitch2(self,Nblock):
-        if self.plotFigs:
-            self.fig = plt.figure(figsize=(pltu.twocolumnwidth,pltu.twocolumnwidth*1.5),
-                                facecolor='w')
-        task1Cues = self.get_cue_list(0)
-        task2Cues = self.get_cue_list(1)
-        self.do_test(Nblock,self.MDeffect,True,False,
-                    task1Cues,task1Cues[0],0,train=True)
-        self.do_test(Nblock,self.MDeffect,False,False,
-                    task2Cues,task2Cues[0],1,train=True)
-        
-        if self.plotFigs:
-            self.fig.tight_layout()
-            dirname="results/results_"+str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])+"/"
-            if not os.path.exists(dirname):    os.makedirs(dirname)
-            filename4=os.path.join(dirname,'fig_plasticPFC2Out_{}.png')
-            self.fig.savefig(filename4.format(time.strftime("%Y%m%d-%H%M%S")),
-                        dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-
-    def taskSwitch3(self,Nblock,MDoff=True):
-        if self.plotFigs:
-            self.fig = plt.figure(figsize=(pltu.twocolumnwidth,pltu.twocolumnwidth*1.5),
-                                facecolor='w')
-        task1Cues = self.get_cue_list(0)
-        task2Cues = self.get_cue_list(1)
-        # after learning, during testing the learning rate is low, just performance tuning
-        self.learning_rate /= 100.
-        MSEs1,_,wOuts1 = self.do_test(Nblock,self.MDeffect,False,False,\
-                            task1Cues,task1Cues[0],0,train=True)
-        if MDoff:
-            self.learning_rate *= 100.
-            MSEs2,_,wOuts2 = self.do_test(Nblock,self.MDeffect,MDoff,False,\
-                                task2Cues,task2Cues[0],1,train=True)
-            self.learning_rate /= 100.
-        else:
-            MSEs2,_,wOuts2 = self.do_test(Nblock,self.MDeffect,MDoff,False,\
-                                task2Cues,task2Cues[0],1,train=True)
-        MSEs3,_,wOuts3 = self.do_test(Nblock,self.MDeffect,False,False,\
-                            task1Cues,task1Cues[0],2,train=True)
-        self.learning_rate *= 100.
-        
-        if self.plotFigs:
-            self.fig.tight_layout()
-            self.fig.savefig('results/fig_plasticPFC2Out_{}.png'.format(time.strftime("%Y%m%d-%H%M%S")),
-                        dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-
-            # plot the evolution of mean squared errors over each block
-            fig2 = plt.figure(figsize=(pltu.twocolumnwidth,pltu.twocolumnwidth),
-                                facecolor='w')
-            ax2 = fig2.add_subplot(111)
-            ax2.plot(MSEs1,'-,r')
-            #ax2.plot(MSEs2,'-,b')
-            ax2.plot(MSEs3,'-,g')
-
-            # plot the evolution of different sets of weights
-            fig2 = plt.figure(figsize=(pltu.twocolumnwidth,pltu.twocolumnwidth),
-                                facecolor='w')
-            ax2 = fig2.add_subplot(231)
-            ax2.plot(np.reshape(wOuts1[:,:,:self.Nsub*2],(Nblock,-1)))
-            ax2.set_ylim((-0.1,0.1))
-            ax2 = fig2.add_subplot(232)
-            ax2.plot(np.reshape(wOuts2[:,:,:self.Nsub*2],(Nblock,-1)))
-            ax2.set_ylim((-0.1,0.1))
-            ax2 = fig2.add_subplot(233)
-            ax2.plot(np.reshape(wOuts3[:,:,:self.Nsub*2],(Nblock,-1)))
-            ax2.set_ylim((-0.1,0.1))
-            ax2 = fig2.add_subplot(234)
-            ax2.plot(np.reshape(wOuts1[:,:,self.Nsub*2:self.Nsub*4],(Nblock,-1)))
-            ax2.set_ylim((-0.1,0.1))
-            ax2 = fig2.add_subplot(235)
-            ax2.plot(np.reshape(wOuts2[:,:,self.Nsub*2:self.Nsub*4],(Nblock,-1)))
-            ax2.set_ylim((-0.1,0.1))
-            ax2 = fig2.add_subplot(236)
-            ax2.plot(np.reshape(wOuts3[:,:,self.Nsub*2:self.Nsub*4],(Nblock,-1)))
-            ax2.set_ylim((-0.1,0.1))
-
-    def test(self,Ntest):
-        if self.plotFigs:
-            self.fig = plt.figure(figsize=(pltu.twocolumnwidth,pltu.twocolumnwidth*1.5),
-                                facecolor='w')
-            # self.fig2 = plt.figure(figsize=(pltu.columnwidth,pltu.columnwidth),
-            #                     facecolor='w')
-        cues = self.get_cue_list()
-        
-        # after learning, during testing the learning rate is low, just performance tuning
-        self.learning_rate /= 100.
-        
-        self.do_test(Ntest,self.MDeffect,False,False,cues,(0,0),0)
-        if self.plotFigs:
-            axs = self.fig.get_axes() #self.fig2.add_subplot(111)
-            ax = axs[0]
-            # plot mean activity of each neuron for this contexti+cuei
-            #  further binning 10 neurons into 1
-            ax.plot(np.mean(np.reshape(\
-                                np.mean(self.meanAct[0,:,:],axis=0),\
-                            (self.Nneur//10,10)),axis=1),',-r')
-        if self.saveData:
-            self.fileDict['meanAct0'] = self.meanAct[0,:,:]
-        self.do_test(Ntest,self.MDeffect,False,False,cues,(0,1),1)
-        if self.plotFigs:
-            # plot mean activity of each neuron for this contexti+cuei
-            ax.plot(np.mean(np.reshape(\
-                                np.mean(self.meanAct[1,:,:],axis=0),\
-                            (self.Nneur//10,10)),axis=1),',-b')
-            ax.set_xlabel('neuron #')
-            ax.set_ylabel('mean rate')
-        if self.saveData:
-            self.fileDict['meanAct1'] = self.meanAct[1,:,:]
-
-        if self.xorTask:
-            self.do_test(Ntest,self.MDeffect,True,False,cues,(0,2),2)
-            self.do_test(Ntest,self.MDeffect,True,False,cues,(0,3),3)
-        else:
-            self.do_test(Ntest,self.MDeffect,True,False,cues,(1,0),2)
-            self.do_test(Ntest,self.MDeffect,True,False,cues,(1,1),3)
-            #self.learning_rate *= 100
-            ## MDeffect and MDCueOff
-            #self.do_test(Ntest,self.MDeffect,True,False,cues,self.cuePlot,2)
-            ## MDeffect and MDDelayOff
-            ## network doesn't (shouldn't) learn this by construction.
-            #self.do_test(Ntest,self.MDeffect,False,True,cues,self.cuePlot,3)
-            ## back to old learning rate
-            #self.learning_rate *= 100.
-        
-        if self.plotFigs:
-            self.fig.tight_layout()
-            self.fig.savefig('results/fig_plasticPFC2Out_{}.png'.format(time.strftime("%Y%m%d-%H%M%S")),
-                        dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            # self.fig2.tight_layout()
 
     def load(self,filename):
         d = shelve.open(filename) # open
@@ -1173,7 +903,7 @@ if __name__ == "__main__":
     group=parser.add_argument("exp_name", default= "switch_prob_runs", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 20., nargs='?',  type=float, help="arg_1")
     group=parser.add_argument("y", default= 5e-5, nargs='?', type=float, help="arg_2")
-    group=parser.add_argument("z", default= .2, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("z", default= .5, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'CueFactor': args.z, 'exp_name': args.exp_name, 'seed': 1}
@@ -1182,8 +912,6 @@ if __name__ == "__main__":
     PFC_G = 0.75 # used to be 6. and did nothing to the model. Now I pass its value to Gbase which does influence jrec
     PFC_G_off = 1.5
     learning_rate = 5e-6
-    Ntest = 20
-    Nblock = 70
     noiseSD = 1e-3
     tauError = 0.001
     reLoadWeights = False
@@ -1205,8 +933,6 @@ if __name__ == "__main__":
             pfcmd.save()
         # save weights right after training,
         #  since test() keeps training on during MD off etc.
-        if pfcmd.debug:
-            pfcmd.test(Ntest) # Ali turned test off for now, takes time, and unclear what it tests. but good to keep monitering neuronal responses within trials.
         print('total_time', (time.perf_counter() - t)/60, ' minutes')
         #pfcmd.fig_monitor = plt.figure()
         #pfcmd.monitor.plot(pfcmd.fig_monitor, pfcmd)
@@ -1215,27 +941,7 @@ if __name__ == "__main__":
         pfcmd.load(filename)
         # all 4cues in a block
         pfcmd.train(learning_cycles_per_task)
-        if pfcmd.debug:
-            pfcmd.test(Ntest)
-        
-        #pfcmd.taskSwitch2(Nblock)
-        
-        # task switch
-        #pfcmd.taskSwitch3(Nblock,MDoff=True)
-        
-        # control experiment: task switch without turning MD off
-        # also has 2 cues in a block, instead of 4 as in test()
-        #pfcmd.taskSwitch3(Nblock,MDoff=False)
-    #figs = list(map(plt.figure, plt.get_fignums()))
-    #current_sizes = [(fi.canvas.height(), fi.canvas.width()) for fi in figs] #list of tuples height, width
-    #from data_generator import move_figure
-    # move_figure(figs[0],col=4, position='bottom')
-    # move_figure(figs[1],col=2, position='top')
-    # move_figure(figs[2],col=0, position='bottom')
-    # move_figure(figs[3],col=4, position='top')
-    # move_figure(figs[4],col=3, position='bottom')
-    # move_figure(figs[6],col=4, position='top')
-
+     
     #Second seed
     # args_dict['seed']= 2
     # pfcmd = PFCMD(PFC_G,PFC_G_off,learning_rate,
