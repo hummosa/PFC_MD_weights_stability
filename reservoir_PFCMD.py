@@ -83,7 +83,7 @@ class PFCMD():
             self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
             self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
             self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
-            self.wV_structured  = False      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
+            self.wV_structured  = True      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
         self.dirConn = False                # direct connections from cue to output, also learned
         self.outExternal = True             # True: output neurons are external to the PFC
@@ -249,7 +249,7 @@ class PFCMD():
         #wIn = np.random.uniform(-1,1,size=(self.Nneur,self.Ncues))
         self.wV = np.zeros((self.Nneur,2))
         self.wIn = np.zeros((self.Nneur,self.Ncues))
-        self.cueFactor = 0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
+        self.cueFactor = args_dict['CueFactor']#0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
         if self.positiveRates: lowcue,highcue = 0.5,1.
         else: lowcue,highcue = -1.,1
         for cuei in np.arange(self.Ncues):
@@ -265,9 +265,11 @@ class PFCMD():
                                 * self.cueFactor
 
             else:
-                input_variance = 1.
+                input_variance = 1.5
                 self.wV = np.random.normal(size=(self.Nneur, 2 ), loc=(lowcue+highcue)/2, scale=input_variance) *self.cueFactor # weights of value input to pfc
-                self.wIn = np.random.normal(size=(self.Neuro, self.Ncues), loc=(lowcue+highcue)/2, scale=input_variance) *self.cueFactor 
+                self.wV = np.clip(self.wV, 0, 1)
+                self.wIn = np.random.normal(size=(self.Nneur, self.Ncues), loc=(lowcue+highcue)/2, scale=input_variance) *self.cueFactor 
+                self.wIn = np.clip(self.wIn, 0, 1)
 
             if self.wInSpread:
                 # small cross excitation to half the neurons of cue-1 (wrap-around)
@@ -925,7 +927,7 @@ class PFCMD():
                 print('target:', target)
             #testing on the last 5 trials
             lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(7, 1, -1)])) )
-            if (blocki > self.Nblocks - 3) and (traini%blocki ==0):
+            if (blocki > self.Nblocks - 3) and (traini%self.trials_per_block ==0):
                 # self.use_context_belief_to_switch_MD = True
                 self.get_v1_v2_from_ofc = True
                 self.no_of_trials_with_ofc_signal = 50 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
@@ -983,18 +985,19 @@ class PFCMD():
             self.fig3.savefig     (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figOuts.savefig  (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             self.figRates.savefig (filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            self.fig_monitor = plt.figure()
+            self.monitor.plot(self.fig_monitor, self)
             if self.debug:
-                self.fig_monitor = plt.figure()
                 self.figCustom.savefig(filename6.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
                 self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.monitor.plot(self.fig_monitor, self)
-            self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+                self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
 
             # output some variables of interest:
             # md ampflication and % correct responses from model.
             filename7=os.path.join(dirname, 'values_of_interest.txt')
             with open(filename7, 'a') as f:
-                f.write('{:.2f}\t {:.2e} \t {:.2f} \t'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'] ))
+                [f.write('{}\t '.format(val)) for val in  [*self.args.values()][:3]]
+                # {:.2e} \t {:.2f} \t'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'] ))
                 for score in self.score:
                     f.write('{:.2f}\t'.format(score)) 
                 f.write('\n')
@@ -1167,13 +1170,13 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "switch_test", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("exp_name", default= "switch_prob_runs", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 20., nargs='?',  type=float, help="arg_1")
     group=parser.add_argument("y", default= 5e-5, nargs='?', type=float, help="arg_2")
-    group=parser.add_argument("z", default= 1., nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("z", default= .2, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
-    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name, 'seed': 1}
+    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'CueFactor': args.z, 'exp_name': args.exp_name, 'seed': 1}
     #PFC_G = 1.6                    # if not positiveRates
     # PFC_G = args_dict['MDamp'] #6.
     PFC_G = 0.75 # used to be 6. and did nothing to the model. Now I pass its value to Gbase which does influence jrec
@@ -1191,7 +1194,7 @@ if __name__ == "__main__":
     learning_cycles_per_task = pfcmd.trials_per_block
     pfcmd.MDamplification = args_dict['MDamp']
     pfcmd.MDlearningrate = args_dict['MDlr']
-    pfcmd.MDlearningBiasFactor = args_dict['MDbf']
+    pfcmd.MDlearningBiasFactor = 1. #args_dict['MDbf']
     
     if not reLoadWeights:
         t = time.perf_counter()
@@ -1251,7 +1254,7 @@ if __name__ == "__main__":
     # pfcmd.MDlearningrate = args_dict['MDlr']
     # pfcmd.MDlearningBiasFactor = args_dict['MDbf']
 
-    pfcmd.train(learning_cycles_per_task)
+    # pfcmd.train(learning_cycles_per_task)
 
 
     if pfcmd.saveData:
