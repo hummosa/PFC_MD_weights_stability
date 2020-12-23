@@ -3,12 +3,32 @@ import matplotlib.pyplot as plt
 
 
 class OFC:
-    ASSOCIATION_RANGE = np.linspace(0, 1, 41)
+    ASSOCIATION_RANGE_N = 41
+    ASSOCIATION_RANGE = np.linspace(0, 1, ASSOCIATION_RANGE_N)
+    # NOTE: STD_THRESH should be adjusted based on association level
+    # For association levels 0.9 and 0.1 we use a threshold value of 2
+    # because we expect tight distributions
+    STD_THRESH = 1.5
+    STD_WINDOW_SZ = 5
+    # NOTE: The error alpha chosen is 2 because the expected error is 0.1 with
+    # association levels 0.9 and 0.1 when one is using the maximizing strategy.
+    # So with the window size of 5, expected error becomes 0.5
+    # If more than 1 errors occurs in the window, we switch
+    # NOTE: Sabrina -- Alpha may need to be changed when I integrate into
+    # the complete model
+    ERR_ALPHA = 6
+    ERR_WINDOW_SZ = 8
 
     def __init__(self):
+        n = self.ASSOCIATION_RANGE_N
+        self.prior = np.ones(n) / n  # Assume a uniform prior
         self.contexts = {}
-        self.ctx = None
-        self.prior = []
+
+        self.has_dist_convgered = False
+        self.std_history = []
+
+        self.trial_err_history = []
+        self.trial_type_history = []
 
     def get_v(self):
         if (len(self.prior) == 0):
@@ -20,11 +40,17 @@ class OFC:
             v2 = 1 - v1
             return np.array([v1, v2])
 
-    def set_context(self, ctx):
-        self.contexts[str(self.ctx)] = self.prior
+    def switch_context(self):
+        [v1, v2] = self.get_v()
+        old_ctx = np.round(v1, 1)
+        self.contexts[str(old_ctx)] = self.prior
 
-        if (str(ctx) in self.contexts):
-            self.prior = self.contexts[str(ctx)]
+        new_ctx = np.round(1 - np.mean(self.trial_err_history), 1)
+
+        if new_ctx in self.contexts:
+            self.prior = self.contexts[str(new_ctx)]
+            self.has_dist_convgered = True
+            self.std_history = []
         else:
             # NOTE: Prior 1 -- binominal
             # n = len(self.ASSOCIATION_RANGE)
@@ -34,46 +60,65 @@ class OFC:
             # NOTE: Prior 2 -- uniform
             n = len(self.ASSOCIATION_RANGE)
             self.prior = np.ones(n) / n  # Assume a uniform prior
-        self.ctx = ctx
+            for trial_type in self.trial_type_history:
+                self.prior = self.compute_posterior(trial_type)
+            self.has_dist_convgered = False
+            self.std_history = []
 
-    def update_v(self, stimulus, choice, target):
-        trial_type = "MATCH" if (stimulus == target).all() else "NON-MATCH"
+    def compute_std(self):
+        N = self.ASSOCIATION_RANGE_N * 1.
+        mean = sum([(x/N) * p for x, p in enumerate(self.prior)])
+        std = sum([p * ((x/N) - mean)**2
+                   for x, p in enumerate(self.prior)]) ** 0.5
+        return std
 
+    def compute_trial_err(self, stimulus, choice, target):
+        if (stimulus == target).all():
+            trial_err = 1 if (stimulus != choice).any() else 0
+        elif (stimulus != target).any():
+            trial_err = 1 if (stimulus == choice).all() else 0
+        return trial_err
+
+    def compute_posterior(self, trial_type):
         likelihood = list(map(lambda x:
                               x if trial_type == "MATCH" else (1-x), self.ASSOCIATION_RANGE))
         posterior = (likelihood * self.prior) / np.sum(likelihood * self.prior)
-        self.prior = posterior
-
-
-class OFC_dumb:
-    ASSOCIATION_RANGE = np.linspace(0, 1, 2)
-
-    def __init__(self, horizon):
-        self.contexts = {}
-        self.ctx = None
-        self.prior = np.array([0.5, 0.5])
-        self.horizon = horizon
-        self.trial_history = [np.array([0.5, 0.5])] * 2
-
-    def get_v(self):
-        return (np.array(self.prior))
-
-    def set_context(self, ctx):
-        self.prior = np.array([0.5, 0.5])
+        return posterior
 
     def update_v(self, stimulus, choice, target):
-        trial_type = "MATCH" if (stimulus == target).all() else "NON-MATCH"
-        self.trial_history.append(trial_type)
-        if len(self.trial_history) > self.horizon:
-            self.trial_history = self.trial_history[-self.horizon:]
+        # Waiting until distribution has converged...
+        if not self.has_dist_convgered:
+            if (len(self.std_history) >= self.STD_WINDOW_SZ and np.mean(self.std_history) < self.STD_THRESH):
+                self.has_dist_convgered = True
 
-        likelihood = list(map(lambda trial_type:
-                              np.array([0.45, 0.55]) if trial_type is "MATCH" else np.array([0.55, 0.45]), self.trial_history))
-        #   np.array([0.55, 0.45]) if trial_type == "MATCH" else np.array([0.45, 0.55]), self.trial_history))
-        likelihood = np.prod(np.array(likelihood), axis=0)
-        posterior = (likelihood * np.array([0.5, 0.5])) / \
-            np.sum(likelihood * np.array([0.5, 0.5]))
-        # posterior = (likelihood * self.prior) / np.sum(likelihood * self.prior)
-        # print(self.trial_history, posterior)
+            trial_type = "MATCH" if (stimulus == target).all() else "NON-MATCH"
+            self.prior = self.compute_posterior(trial_type)
 
-        self.prior = posterior
+            self.std_history.append(self.compute_std())
+            if len(self.std_history) > self.STD_WINDOW_SZ:
+                self.std_history.pop(0)
+        # Check for changes and switch
+        else:
+            trial_err = self.compute_trial_err(stimulus, choice, target)
+            self.trial_err_history.append(trial_err)
+            trial_type = "MATCH" if (stimulus == target).all() else "NON-MATCH"
+            self.trial_type_history.append((trial_type))
+
+            (v1, v2) = self.get_v()
+            expected_err = min(v1, v2)  # TODO not self documenting
+
+            # win_size = min(3 + np.round(expected_err * 10, 0),
+            #                self.ERR_WINDOW_SZ)
+            win_size = self.ERR_WINDOW_SZ
+
+            if len(self.trial_err_history) < win_size:
+                return
+
+            if len(self.trial_err_history) > win_size:
+                self.trial_err_history.pop(0)
+                trial_type = self.trial_type_history.pop(0)
+                self.prior = self.compute_posterior(trial_type)
+
+            err_threshold = self.ERR_ALPHA * expected_err
+            if np.mean(self.trial_err_history) > err_threshold:
+                return "SWITCH"

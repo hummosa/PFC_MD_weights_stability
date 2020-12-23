@@ -21,8 +21,9 @@ class OFC:
     ERR_WINDOW_SZ = 8
 
     def __init__(self):
+        n = self.ASSOCIATION_RANGE_N
+        self.prior = np.ones(n) / n  # Assume a uniform prior
         self.contexts = {}
-        self.prior = []
 
         self.has_dist_convgered = False
         self.std_history = []
@@ -41,7 +42,7 @@ class OFC:
             return np.array([v1, v2])
 
     def switch_context(self):
-        [v1, v2] = ofc.get_v()
+        [v1, v2] = self.get_v()
         old_ctx = np.round(v1, 1)
         self.contexts[str(old_ctx)] = self.prior
 
@@ -114,8 +115,9 @@ class OFC:
             (v1, v2) = self.get_v()
             expected_err = min(v1, v2)  # TODO not self documenting
 
-            win_size = min(3 + np.round(expected_err * 10, 0),
-                           self.ERR_WINDOW_SZ)
+            # win_size = min(3 + np.round(expected_err * 10, 0),
+            #                self.ERR_WINDOW_SZ)
+            win_size = self.ERR_WINDOW_SZ
             print(expected_err, win_size)
 
             if len(self.trial_err_history) < win_size:

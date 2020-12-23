@@ -3,7 +3,7 @@
 
 """Some reservoir tweaks are inspired by Nicola and Clopath, arxiv, 2016 and Miconi 2016."""
 
-from refactor.ofc_mle import OFC, OFC_dumb
+from refactor.ofc_mle import OFC
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,9 +23,7 @@ cuda = False
 if cuda:
     import torch
 
-# ofc = OFC_dumb(horizon=40)
 ofc = OFC()
-ofc.set_context(0.1)
 
 
 class PFCMD():
@@ -742,8 +740,10 @@ class PFCMD():
 
             # NOTE: Sabrina -- exploring OFC stuff
             self.ofc_calls += 1
-            ofc.update_v(cue[:2], out, target)
-            self.ofc_history.append(self.recent_error[0])
+            ofc_signal = ofc.update_v(cue[:2], out, target)
+            self.ofc_history.append(ofc.get_v()[0])
+            if ofc_signal == "SWITCH":
+                ofc.switch_context()
 
             self.save_vals["cue"] = np.concatenate(
                 (self.save_vals["cue"], [cue[:2]]), axis=0)
