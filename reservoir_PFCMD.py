@@ -26,10 +26,12 @@ class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
         self.debug = False
+        # self.figure_format =  'EPS' # 'PNG'
+        self.figure_format =  'PNG'
         self.RNGSEED = args_dict['seed'] #1
         np.random.seed([self.RNGSEED])
         self.args = args_dict # dict of args label:value
-        self.Nsub = 100                     # number of neurons per cue
+        self.Nsub = 100 #It really is 200, but split across two populations                    # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
         self.Nblocks = 5                    # number of blocks
@@ -61,8 +63,8 @@ class PFCMD():
         self.tauError = tauError            # smooth the error a bit, so that weights don't fluctuate
         self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
-        self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
-        self.MDlearningrate = 5e-6 #1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
+        self.MDamplification = 25.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
+        self.MDlearningrate = 5e-5 #1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
         self.MDrange = 0.1                  # Allowable range for MD-PFC synapses.
         self.MDlearningBias = 0.3           # threshold for Hebbian learning. Biases pre*post activity.
         self.MDlearningBiasFactor = 1.     # Switched dynamic Bias calc based on average, this gets multiplied with running avg resulting in effective bias for hebbian learning.
@@ -249,7 +251,7 @@ class PFCMD():
         #wIn = np.random.uniform(-1,1,size=(self.Nneur,self.Ncues))
         self.wV = np.zeros((self.Nneur,2))
         self.wIn = np.zeros((self.Nneur,self.Ncues))
-        self.cueFactor = args_dict['CueFactor']#0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
+        self.cueFactor = 0.5#args_dict['CueFactor']#0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
         if self.positiveRates: lowcue,highcue = 0.5,1.
         else: lowcue,highcue = -1.,1
         for cuei in np.arange(self.Ncues):
@@ -406,8 +408,8 @@ class PFCMD():
 
                     ########################################################
                     ########################################################
-                    ########################################################
-                    # MDout = np.array([1,0]) #! TODO clammped MD!!!!!!!!!!!!!!!!!!!!!!!!!!!!##
+                    #######################################################
+                    MDout = np.array([1,0]) #! TODO clammped MD!!!!!!!!!!!!!!!!!!!!!!!!!!!!##
                     ########################################################
                     ########################################################
                     ########################################################
@@ -792,9 +794,9 @@ class PFCMD():
             #testing on the last 5 trials
             lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(7, 1, -1)])) )
             if (blocki > self.Nblocks - 3) and (traini%self.trials_per_block ==0):
-                # self.use_context_belief_to_switch_MD = True
+                self.use_context_belief_to_switch_MD = False
                 self.get_v1_v2_from_ofc = True
-                self.no_of_trials_with_ofc_signal = 50 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
+                self.no_of_trials_with_ofc_signal = 30 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
                 self.hx_of_ofc_signal_lengths.append((blocki, self.no_of_trials_with_ofc_signal))
             cues, routs, outs, MDouts, MDinps, errors = \
@@ -840,32 +842,37 @@ class PFCMD():
             parm_summary= str(list(self.args.values())[0])+"_"+str(list(self.args.values())[1])+"_"+str(list(self.args.values())[2])
             if not os.path.exists(dirname):
                     os.makedirs(dirname)
-            filename1=os.path.join(dirname, 'fig_weights_{}_{}.png')
-            filename2=os.path.join(dirname, 'fig_behavior_{}_{}.png')
-            filename3=os.path.join(dirname, 'fig_rates_{}_{}.png')
-            filename4=os.path.join(dirname, 'fig_monitored_{}_{}.png')
-            filename5=os.path.join(dirname, 'fig_trials_{}_{}.png')
-            filename6=os.path.join(dirname, 'fig_custom_{}_{}.png')
-            self.fig3.savefig     (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.figOuts.savefig  (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-            self.figRates.savefig (filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+            filename1=os.path.join(dirname, 'fig_weights_{}_{}.'+self.figure_format)
+            filename2=os.path.join(dirname, 'fig_behavior_{}_{}.'+self.figure_format)
+            filename3=os.path.join(dirname, 'fig_rates_{}_{}.'+self.figure_format)
+            filename4=os.path.join(dirname, 'fig_monitored_{}_{}.'+self.figure_format)
+            filename5=os.path.join(dirname, 'fig_trials_{}_{}.'+self.figure_format)
+            filename6=os.path.join(dirname, 'fig_custom_{}_{}.'+self.figure_format)
+            self.fig3.savefig     (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+            self.figOuts.savefig  (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+            self.figRates.savefig (filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
             self.fig_monitor = plt.figure()
             self.monitor.plot(self.fig_monitor, self)
+            self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
             if self.debug:
-                self.figCustom.savefig(filename6.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-                self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
-                self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
+                self.figCustom.savefig(filename6.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+                self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
 
             # output some variables of interest:
             # md ampflication and % correct responses from model.
             filename7=os.path.join(dirname, 'values_of_interest.txt')
+            filename7exits = os.path.exists(filename7)
             with open(filename7, 'a') as f:
+                if not filename7exits:
+                    [f.write(head+'\t') for head in ['MDamp', 'LR', 'HebbT', '1st', '2nd', 'rd', '4th', 'avg1-3', 'mean']]
                 [f.write('{}\t '.format(val)) for val in  [*self.args.values()][:3]]
                 # {:.2e} \t {:.2f} \t'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'] ))
                 for score in self.score:
                     f.write('{:.2f}\t'.format(score)) 
                 f.write('\n')
 
+            filename8=os.path.join(dirname, 'Corrects{}_{}')
+            np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
 
     def load(self,filename):
         d = shelve.open(filename) # open
@@ -901,12 +908,12 @@ class PFCMD():
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
     group=parser.add_argument("exp_name", default= "switch_prob_runs", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 20., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 5e-5, nargs='?', type=float, help="arg_2")
-    group=parser.add_argument("z", default= .5, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("x", default= 30., nargs='?',  type=float, help="arg_1")
+    group=parser.add_argument("y", default= 1, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("z", default= 7.7, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
-    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'CueFactor': args.z, 'exp_name': args.exp_name, 'seed': 1}
+    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name, 'seed': int(args.y)}
     #PFC_G = 1.6                    # if not positiveRates
     # PFC_G = args_dict['MDamp'] #6.
     PFC_G = 0.75 # used to be 6. and did nothing to the model. Now I pass its value to Gbase which does influence jrec
@@ -921,8 +928,8 @@ if __name__ == "__main__":
                     noiseSD,tauError,plotFigs=plotFigs,saveData=saveData,args_dict=args_dict)
     learning_cycles_per_task = pfcmd.trials_per_block
     pfcmd.MDamplification = args_dict['MDamp']
-    pfcmd.MDlearningrate = args_dict['MDlr']
-    pfcmd.MDlearningBiasFactor = 1. #args_dict['MDbf']
+    pfcmd.MDlearningrate = 5e-5
+    pfcmd.MDlearningBiasFactor = args_dict['MDbf']
     
     if not reLoadWeights:
         t = time.perf_counter()
