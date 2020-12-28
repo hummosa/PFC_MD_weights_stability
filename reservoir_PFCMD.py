@@ -794,7 +794,7 @@ class PFCMD():
             #testing on the last 5 trials
             lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(7, 1, -1)])) )
             if (blocki > self.Nblocks - 3) and (traini%self.trials_per_block ==0):
-                self.use_context_belief_to_switch_MD = False
+                self.use_context_belief_to_switch_MD = True
                 self.get_v1_v2_from_ofc = True
                 self.no_of_trials_with_ofc_signal = 30 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
@@ -864,7 +864,7 @@ class PFCMD():
             filename7exits = os.path.exists(filename7)
             with open(filename7, 'a') as f:
                 if not filename7exits:
-                    [f.write(head+'\t') for head in ['MDamp', 'LR', 'HebbT', '1st', '2nd', 'rd', '4th', 'avg1-3', 'mean']]
+                    [f.write(head+'\t') for head in ['MDamp', 'LR', 'HebbT', '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean']]
                 [f.write('{}\t '.format(val)) for val in  [*self.args.values()][:3]]
                 # {:.2e} \t {:.2f} \t'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'] ))
                 for score in self.score:
@@ -872,13 +872,13 @@ class PFCMD():
                 f.write('\n')
             
             if 1==2: # output massive weight and rate files
-                filename8=os.path.join(dirname, 'CorrectsSwitch{}_{}')
+                filename8=os.path.join(dirname, 'Corrects{}_Switch{}')
                 np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
                 import pickle
-                filehandler = open(os.path.join(dirname, 'RatesSwitch{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                filehandler = open(os.path.join(dirname, 'Rates{}_Switch{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
                 pickle.dump(rates, filehandler)
                 filehandler.close()
-                filehandler = open(os.path.join(dirname, 'WeightsSwitch{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                filehandler = open(os.path.join(dirname, 'Weights{}_Switch{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
                 pickle.dump(weights, filehandler)
                 filehandler.close()
 

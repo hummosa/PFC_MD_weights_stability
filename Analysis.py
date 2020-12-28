@@ -72,7 +72,7 @@ weights_files = [file for file in files if 'Weights' in file]
 
 # strings to look for in filtering file for each experiemnt to compare 
 
-comp_one = '1_1.0'
+comp_one = '1_1.0_Switch'
 comp_two = '1_0.3'
 
 comp_one_files = [os.path.join('./results/'+exp_name,file) for file in rates_files if comp_one in file]
@@ -157,11 +157,18 @@ corrs = np.zeros(shape=(Trials, Neurons))
 for t in range(Trials):
     for n in range(Neurons):
         corrs[t,n] = np.corrcoef(MDinputs[t,:,0], PFCrates[t,:,n])[0,1]
-#%%
+#%% Plotting based on input structure to the model
 plt.ion()
-plt.plot(np.convolve( np.mean(corrs[:,150:200], axis=1), np.ones((5,))/5, mode='valid' ))
-plt.plot(np.convolve( np.mean(corrs[:,50:100], axis=1), np.ones((5,))/5, mode='valid' ))
+ax = plt.gca()
+ax.plot(np.convolve( np.mean(corrs[:,150:200], axis=1), np.ones((5,))/5, mode='valid' ))
+ax.plot(np.convolve( np.mean(corrs[:,50:100], axis=1), np.ones((5,))/5, mode='valid' ))
+ax.set_xlim([1900,2200])
 
+#%% Plotting based on cells found to respond highly in v1 or v2 contexts. 
+plt.ion()
+ax = plt.gca()
+ax.plot(np.convolve( np.mean(corrs[:,high1], axis=1), np.ones((5,))/5, mode='valid' ))
+ax.plot(np.convolve( np.mean(corrs[:,high2], axis=1), np.ones((5,))/5, mode='valid' ))
 # Averages data
 
 # %%
