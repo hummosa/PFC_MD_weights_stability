@@ -3,7 +3,7 @@
 
 """Some reservoir tweaks are inspired by Nicola and Clopath, arxiv, 2016 and Miconi 2016."""
 
-from refactor.ofc_mle import OFC
+from refactor.ofc_trailtype import OFC as OFC_Trial
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,7 +23,7 @@ cuda = False
 if cuda:
     import torch
 
-ofc = OFC()
+ofc = OFC_Trial()
 
 
 class PFCMD():
@@ -31,6 +31,7 @@ class PFCMD():
                  noiseSD, tauError, plotFigs=True, saveData=False, args_dict={}):
         # NOTE: Sabrina -- this is me trying to debug and understand
         self.ofc_history = []
+        self.ofc_switch = []
         self.save_vals = {
             "cue": np.array([[0, 0]]),
             "target": np.array([[0, 0]])
@@ -107,7 +108,7 @@ class PFCMD():
             self.decayRewardPerTrial = 0.1
             # input routing per current context or per context belief
             self.use_context_belief = True
-            self.get_v1_v2_from_ofc = False
+            self.get_v1_v2_from_ofc = True
             # input routing per current context or per context belief
             self.use_context_belief_to_route_input = False
             # input routing per current context or per context belief
@@ -736,13 +737,14 @@ class PFCMD():
                 self.recent_error = np.array(
                     [0.1, 0.9]) if inpi == 0 else np.array([0.9, 0.1])
                 if self.get_v1_v2_from_ofc:
-                    self.recent_error = np.array(ofc.get_v())
+                    self.recent_error = np.flip(np.array(ofc.get_v()))
 
             # NOTE: Sabrina -- exploring OFC stuff
             self.ofc_calls += 1
             ofc_signal = ofc.update_v(cue[:2], out, target)
             self.ofc_history.append(ofc.get_v()[0])
             if ofc_signal == "SWITCH":
+                self.ofc_switch.append(self.ofc_calls)
                 ofc.switch_context()
 
             self.save_vals["cue"] = np.concatenate(
@@ -966,6 +968,12 @@ class PFCMD():
             # NOTE: Sabrina -- trying to figure what my OFC is doing
             self.fig_ofc = plt.figure()
             self.fig_ofc.gca().plot(self.ofc_history)
+            for switch_i in self.ofc_switch:
+                self.fig_ofc.gca().axvline(x=switch_i, color='r', linestyle=':')
+            self.fig_ofc.gca().set_xlabel('Trial')
+            self.fig_ofc.gca().set_ylabel('V1')
+            self.fig_ofc.gca().set_title(
+                'OFC Maximum Likelihood Prediction of V1\n(With Uniform Prior)')
             self.fig_ofc.savefig(filename7.format(parm_summary, time.strftime(
                 "%Y%m%d-%H%M%S")), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w')
             np.save('cues_targets.npy', self.save_vals)
