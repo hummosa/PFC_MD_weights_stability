@@ -26,8 +26,8 @@ class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
         self.debug = False
-        self.figure_format =  'EPS' # 'PNG'
-        # self.figure_format =  'PNG'
+        # self.figure_format =  'EPS' # 'PNG'
+        self.figure_format =  'PNG'
         self.RNGSEED = args_dict['seed'] #1
         np.random.seed([self.RNGSEED])
         self.args = args_dict # dict of args label:value
@@ -794,7 +794,7 @@ class PFCMD():
             #testing on the last 5 trials
             lengths_of_directed_trials = 200 -(30*(np.array([i for i in range(7, 1, -1)])) )
             if (blocki > self.Nblocks - 3) and (traini%self.trials_per_block ==0):
-                self.use_context_belief_to_switch_MD = True
+                self.use_context_belief_to_switch_MD = False
                 self.get_v1_v2_from_ofc = True
                 self.no_of_trials_with_ofc_signal = 30 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
@@ -871,7 +871,7 @@ class PFCMD():
                     f.write('{:.2f}\t'.format(score)) 
                 f.write('\n')
             
-            if 1==1: # output massive weight and rate files
+            if 1==2: # output massive weight and rate files
                 filename8=os.path.join(dirname, 'CorrectsSwitch{}_{}')
                 np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
                 import pickle
