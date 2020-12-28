@@ -743,9 +743,20 @@ class PFCMD():
                 for score in self.score:
                     f.write('{:.2f}\t'.format(score)) 
                 f.write('\n')
+            
+            if 1==2: # output massive weight and rate files
+                filename8=os.path.join(dirname, 'CorrectsSwitch{}_{}')
+                np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
+                import pickle
+                filehandler = open(os.path.join(dirname, 'RatesSwitch{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                pickle.dump(rates, filehandler)
+                filehandler.close()
+                filehandler = open(os.path.join(dirname, 'WeightsSwitch{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                pickle.dump(weights, filehandler)
+                filehandler.close()
 
-            filename8=os.path.join(dirname, 'Corrects{}_{}')
-            np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
+            # np.save(os.path.join(dirname, 'Rates{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), rates)
+            # np.save(os.path.join(dirname, 'Weights{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), weights)
 
     def load(self,filename):
         d = shelve.open(filename) # open
@@ -783,7 +794,7 @@ if __name__ == "__main__":
     group=parser.add_argument("exp_name", default= "switch_prob_runs", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 30., nargs='?',  type=float, help="arg_1")
     group=parser.add_argument("y", default= 1, nargs='?', type=float, help="arg_2")
-    group=parser.add_argument("z", default= 7.7, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("z", default= 1.0, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can now assign args.x and args.y to vars
     args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name, 'seed': int(args.y)}
@@ -842,7 +853,7 @@ if __name__ == "__main__":
 
     # pfcmd.train(learning_cycles_per_task)
 
-
+    
     if pfcmd.saveData:
         pfcmd.fileDict.close()
     

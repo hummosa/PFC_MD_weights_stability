@@ -39,6 +39,7 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     pfcmd.figRates.set_size_inches([9,7])
     ax = axes[0,0]
     ax.plot(range(Ntrain),np.mean( PFCrates[:,:,:5], axis=1), '.', markersize =0.5)
+    ax.plot(range(Ntrain), np.mean( PFCrates[:, :,:p] , axis=(1,2)), '-', linewidth=-.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','Mean FR')
     ax.set_ylim([0,1])
@@ -46,14 +47,14 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     
     ax = axes[0,1]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p:p+5], axis=1), '.', markersize =0.5)
-    ax.plot(range(Ntrain), np.mean( PFCrates[:, :,p:p*2] , axis=(1,2)), '-', linewidth=1)
+    ax.plot(range(Ntrain), np.mean( PFCrates[:, :,p:p*2] , axis=(1,2)), '-', linewidth=-.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_ylim([0,1])
     ax.set_title('PFC Up-V2')
     ax = axes[0,2]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p*2:p*2+5], axis=1), '.', markersize =0.5)
-    ax.plot(range(Ntrain), np.mean( PFCrates[:, :,p*2:p*3] , axis=(1,2)), '-', linewidth=1)
+    ax.plot(range(Ntrain), np.mean( PFCrates[:, :,p*2:p*3] , axis=(1,2)), '-', linewidth=0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False)
     ax.set_ylim([0,1])
     pltu.axes_labels(ax,'','')
