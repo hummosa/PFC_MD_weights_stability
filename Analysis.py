@@ -172,3 +172,57 @@ ax.plot(np.convolve( np.mean(corrs[:,high2], axis=1), np.ones((5,))/5, mode='val
 # Averages data
 
 # %%
+#%%
+exp_name = 'association_levels_seeds'
+
+#get files
+files = os.listdir('./results/' + exp_name+'/')
+corrects_files = [file for file in files if 'Corrects' in file]
+
+# comp_one = '0200' # MD clamped to one neuron active
+comp_one = '0.3'
+comp_two = '1.0_20'
+
+comp_one_files = [os.path.join('./results/'+exp_name,file) for file in corrects_files if comp_one in file]
+comp_two_files = [os.path.join('./results/'+exp_name,file) for file in corrects_files if (comp_two in file) and ('0200' not in file)]
+
+corr_one = [np.convolve(np.load(c1f), np.ones((40,))/40, mode='valid') for c1f in comp_one_files]
+corr_two = [np.convolve(np.load(c2f), np.ones((40,))/40, mode='valid') for c2f in comp_two_files]
+
+corrects_one = np.stack(corr_one)
+corrects_two = np.stack(corr_two) # shape 2, 2500 [no of files, no of trials]
+
+mean_one = np.mean(corrects_one, axis= 0)
+std_one  = np.std (corrects_one, axis= 0)
+
+mean_two = np.mean(corrects_two, axis= 0)
+std_two  = np.std (corrects_two, axis= 0)
+# %%
+
+cog_flex_avg_one = [np.mean(corrects_one[:,s:s+100]) for s in range(0, 3000, 500)]
+cog_flex_avg_two = [np.mean(corrects_two[:,s:s+100]) for s in range(0, 3000, 500)]
+cog_flex_avg_one[-1]=(np.mean(corrects_one))
+cog_flex_avg_two[-1]=(np.mean(corrects_two))
+
+cog_flex_std_one = np.array([np.std(corrects_one[:,s:s+100]) for s in range(0, 3000, 500)])
+cog_flex_std_two = np.array([np.std(corrects_two[:,s:s+100]) for s in range(0, 3000, 500)])
+cog_flex_std_one[-1]=np.std(corrects_one)
+cog_flex_std_two[-1]=np.std(corrects_two)
+
+plt.bar(range(1,19,3),cog_flex_avg_one)
+plt.errorbar(range(1,19,3),cog_flex_avg_one, yerr=cog_flex_std_one*1.65 / np.sqrt(10), fmt='o', color='black')
+# *1.65 ttimes std div by sqrt(n) to get CI 
+plt.bar(range(2,19,3),cog_flex_avg_two, color='tab:orange')
+plt.errorbar(range(2,19,3),cog_flex_avg_two, yerr=cog_flex_std_two*1.65 / np.sqrt(10), fmt='o', color='black')
+plt.savefig(f'error_bars.{file_format}', format=file_format)
+
+plt.figure()
+plt.plot(range(len(mean_one)), mean_one)
+plt.fill_between(range(len(mean_one)), mean_one-std_one, mean_one+std_one, alpha=.4)
+
+plt.plot(range(len(mean_two)), mean_two)
+plt.fill_between(range(len(mean_two)), mean_two-std_two, mean_two+std_two, alpha=.4)
+
+plt.savefig(f'average_correct_w_wout_MD.{file_format}', format=file_format)
+
+# %%
