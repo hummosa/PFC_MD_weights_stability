@@ -35,7 +35,7 @@ class PFCMD():
         self.Nsub = 100 #It really is 200, but split across two populations                    # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 8                    # number of blocks
+        self.Nblocks = 11                    # number of blocks
         self.trials_per_block = 500
         self.Nmd    = 2                     # number of MD cells.
         self.xorTask = False                # use xor Task or simple 1:1 map task
@@ -96,7 +96,7 @@ class PFCMD():
         self.outFB = False                  # if outExternal, then whether feedback from output to reservoir
         self.noisePresent = True           # add noise to all reservoir units
 
-        self.positiveRates = False           # whether to clip rates to be only positive, G must also change
+        self.positiveRates = True           # whether to clip rates to be only positive, G must also change
         
         self.MDlearn = True                # whether MD should learn
                                             #  possibly to make task representations disjoint (not just orthogonal)
@@ -313,6 +313,12 @@ class PFCMD():
             if MDeffect:
                 # MD decays 10x slower than PFC neurons,
                 #  so as to somewhat integrate PFC input
+                if self.use_context_belief_to_switch_MD: 
+                    #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                    # MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                    # MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 1 for cxt belief 1
+                    MDinp += np.array([0.2,-0.2]) if contexti==0 else np.array([-0.2,0.2]) 
+
                 if self.positiveRates:
                     MDinp +=  self.dt/self.tauMD * \
                             ( -MDinp + np.dot(self.wPFC2MD,rout) )
@@ -339,10 +345,6 @@ class PFCMD():
                     #  hardcoded for self.Nmd = 2
                     if MDinp[0] > MDinp[1]: MDout = np.array([1,0])
                     else: MDout = np.array([0,1])
-                    if self.use_context_belief_to_switch_MD: 
-                        #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
-                        # MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
-                        MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
 
                     ########################################################
                     ########################################################
@@ -666,8 +668,8 @@ class PFCMD():
                 print('cue:', cue)
                 print('target:', target)
             #testing on the last 5 trials
-            if (blocki > self.Nblocks - 3) and (traini%self.trials_per_block ==0):
-                self.use_context_belief_to_switch_MD = True
+            if (blocki > self.Nblocks - 8) and (traini%self.trials_per_block ==0):
+                self.use_context_belief_to_switch_MD = False
                 self.get_v1_v2_from_ofc = True
                 self.no_of_trials_with_ofc_signal = 30 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
@@ -744,14 +746,15 @@ class PFCMD():
                     f.write('{:.2f}\t'.format(score)) 
                 f.write('\n')
             
-            if 1==2: # output massive weight and rate files
-                filename8=os.path.join(dirname, 'Corrects{}_Switch{}')
-                np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
+
+            filename8=os.path.join(dirname, 'Corrects{}_{}')
+            np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
+            if 1==1: # output massive weight and rate files
                 import pickle
-                filehandler = open(os.path.join(dirname, 'Rates{}_Switch{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                filehandler = open(os.path.join(dirname, 'Rates{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
                 pickle.dump(rates, filehandler)
                 filehandler.close()
-                filehandler = open(os.path.join(dirname, 'Weights{}_Switch{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                filehandler = open(os.path.join(dirname, 'Weights{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
                 pickle.dump(weights, filehandler)
                 filehandler.close()
 

@@ -64,7 +64,12 @@ plt.savefig(f'average_correct_w_wout_MD.{file_format}', format=file_format)
 ##############################################################
 ################################################ PFC rates
 ##############################################################
-exp_name = 'switch_prob_runs'
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+file_format= 'PNG'
+
+exp_name = 'ofc_v1v2_no_switch'
 
 files = os.listdir('./results/' + exp_name+'/')
 rates_files = [file for file in files if 'Rates' in file]
@@ -72,8 +77,8 @@ weights_files = [file for file in files if 'Weights' in file]
 
 # strings to look for in filtering file for each experiemnt to compare 
 
-comp_one = '1_1.0_Switch'
-comp_two = '1_0.3'
+comp_one = '0_1.0'
+comp_two = '0_0.3'
 
 comp_one_files = [os.path.join('./results/'+exp_name,file) for file in rates_files if comp_one in file]
 comp_two_files = [os.path.join('./results/'+exp_name,file) for file in rates_files if (comp_two in file)]
@@ -159,21 +164,24 @@ for t in range(Trials):
         corrs[t,n] = np.corrcoef(MDinputs[t,:,0], PFCrates[t,:,n])[0,1]
 #%% Plotting based on input structure to the model
 plt.ion()
+plt.figure()
 ax = plt.gca()
 ax.plot(np.convolve( np.mean(corrs[:,150:200], axis=1), np.ones((5,))/5, mode='valid' ))
 ax.plot(np.convolve( np.mean(corrs[:,50:100], axis=1), np.ones((5,))/5, mode='valid' ))
-ax.set_xlim([1900,2200])
-
+plt.savefig(f'corr_input_populations.{file_format}', format=file_format)
+# ax.set_xlim([1900,2200])
 #%% Plotting based on cells found to respond highly in v1 or v2 contexts. 
-plt.ion()
+# plt.ion()
+plt.figure()
 ax = plt.gca()
 ax.plot(np.convolve( np.mean(corrs[:,high1], axis=1), np.ones((5,))/5, mode='valid' ))
 ax.plot(np.convolve( np.mean(corrs[:,high2], axis=1), np.ones((5,))/5, mode='valid' ))
+plt.savefig(f'corr_highest.{file_format}', format=file_format)
 # Averages data
 
 # %%
 #%%
-exp_name = 'association_levels_seeds'
+exp_name = 'ofc_v1v2_no_switch'
 
 #get files
 files = os.listdir('./results/' + exp_name+'/')
