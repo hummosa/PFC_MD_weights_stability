@@ -39,18 +39,24 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     pfcmd.figRates.set_size_inches([9,7])
     ax = axes[0,0]
     ax.plot(range(Ntrain),np.mean( PFCrates[:,:,:5], axis=1), '.', markersize =0.5)
+    ax.plot(range(Ntrain), np.mean( PFCrates[:, :,:p] , axis=(1,2)), '-', linewidth=-.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','Mean FR')
+    ax.set_ylim([0,1])
     ax.set_title('PFC Up-V1')
     
     ax = axes[0,1]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p:p+5], axis=1), '.', markersize =0.5)
+    ax.plot(range(Ntrain), np.mean( PFCrates[:, :,p:p*2] , axis=(1,2)), '-', linewidth=-.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','')
+    ax.set_ylim([0,1])
     ax.set_title('PFC Up-V2')
     ax = axes[0,2]
     ax.plot(range(Ntrain),np.mean( PFCrates[:, :,p*2:p*2+5], axis=1), '.', markersize =0.5)
+    ax.plot(range(Ntrain), np.mean( PFCrates[:, :,p*2:p*3] , axis=(1,2)), '-', linewidth=0.5)
     pltu.beautify_plot(ax,x0min=False,y0min=False)
+    ax.set_ylim([0,1])
     pltu.axes_labels(ax,'','')
     ax.set_title('PFC Down-V1')
 
@@ -133,12 +139,14 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     Nstage = len(Corrects)//stages
     # pfcmd.score =  [np.mean(Corrects[istage*Nstage:(istage+1)*Nstage])* 100. for istage in range(stages)]  # score binnged into stages
     pfcmd.score =  [np.mean(Corrects[istage*tpb:(istage*tpb)+no_trials_to_score])* 100. for istage in range(1, stages+1)]  # score binnged into stages
+    pfcmd.score.append(np.mean(pfcmd.score[:-1]))   # The avrg of the cognitive flex measures, except the last forced switch block.
     pfcmd.score.append(np.mean(Corrects) * 100. )   # Add a var that holds the score of the model. % correct response. Later to be outputed as a text file.
-
+    pfcmd.corrects = Corrects
+    
     noise = 0.15
     ax = axes[3,1]
     ax.plot(Matches  + np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 0.5)
-    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 0.5)
+    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 0.5)
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
     # ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
@@ -154,22 +162,27 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     # PLOT BEHAVIOR MEASURES
     pfcmd.figOuts = plt.figure()
 
-    noise = 0.05
-    ax = pfcmd.figOuts.add_subplot(311)
-    ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    'o', markersize = 1)
-    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 1)
+    noise = 0.04
+    ax = pfcmd.figOuts.add_subplot(211)
+    ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    'o', markersize = 0.5)
+    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 0.5)
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
-    ax.set_title('Blue o: Correct    Orange x: response')
+    ax.set_title('Blue: Correct    Orange: response')
     ax.set_ylim([-0.3, 1.3])
     # ax.set_xlim([0, 2200])
     
-    for bi, directed_trials in pfcmd.hx_of_ofc_signal_lengths:
-        # print(bi*pfcmd.trials_per_block, directed_trials)
-        ax.plot(range(bi*pfcmd.trials_per_block, bi*pfcmd.trials_per_block+ directed_trials), np.ones(directed_trials)*1.1 )
+    if pfcmd.use_context_belief_to_switch_MD:
+        for bi, directed_trials in pfcmd.hx_of_ofc_signal_lengths:
+            # print(bi*pfcmd.trials_per_block, directed_trials)
+            ax.plot(range(bi*pfcmd.trials_per_block, bi*pfcmd.trials_per_block+ directed_trials), np.ones(directed_trials)*1.1 )
+    try:
+        ax.plot(pfcmd.monitor.vars[1], alpha=0.6)
+    except:
+        pass
 
-    ax = pfcmd.figOuts.add_subplot(312)
-    ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    'o', markersize = 1)
-    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'x', markersize = 1)
+    ax = pfcmd.figOuts.add_subplot(212)
+    ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    'o', markersize = 0.5)
+    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  'o', markersize = 0.5)
     pltu.axes_labels(ax, 'Trials', 'non-match    Match')
     # ax.set_title('Blue o: Correct    Orange x: response')
     ax.set_ylim([-0.3, 1.3])
@@ -180,20 +193,20 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
     ax.plot(rm, 'tab:red', alpha = 0.7)
     ax.plot(rm2, 'tab:blue', alpha = 0.7)
 
-    ax = pfcmd.figOuts.add_subplot(313)
-    ax.plot(Matches,    'o', markersize = 3)
-    ax.plot(Responses,  'x', markersize = 3)
-    pltu.axes_labels(ax, 'Trials', 'non-match    Match')
-    ax.set_ylim([-0.3, 1.3])
-    ax.set_xlim([1970, 2050])
+    # ax = pfcmd.figOuts.add_subplot(313)
+    # ax.plot(Matches,    'o', markersize = 3)
+    # ax.plot(Responses,  'x', markersize = 3)
+    # pltu.axes_labels(ax, 'Trials', 'non-match    Match')
+    # ax.set_ylim([-0.3, 1.3])
+    # ax.set_xlim([1970, 2050])
 
-    plt.text(0.01, 0.1, str(pfcmd.args), transform=ax.transAxes)
+    plt.text(0.01, -0.1, str(pfcmd.args), transform=ax.transAxes)
     pfcmd.figRates
     pfcmd.figRates.tight_layout()
 
 
     # PLOT within trial activity for 4 selected trials:
-    trials_to_draw = [0,1, pfcmd.trials_per_block]# [0, pfcmd.trials_per_block, int(pfcmd.Nblocks//4*pfcmd.trials_per_block)]
+    trials_to_draw = [0,pfcmd.trials_per_block, pfcmd.trials_per_block+100]# [0, pfcmd.trials_per_block, int(pfcmd.Nblocks//4*pfcmd.trials_per_block)]
     pfcmd.figTrials, axes = plt.subplots(5,len(trials_to_draw))#, sharex=True)# , sharey=True)
     pfcmd.figTrials.set_size_inches([9,3*len(trials_to_draw)])
     
@@ -202,22 +215,22 @@ def plot_rates(pfcmd, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)',
         ax.plot(range(200),np.mean( PFCrates[trial,:,:p], axis=1), '-', linewidth=1)
         ax.plot(range(200), PFCrates[trial,:,:5], '-', linewidth=0.5)
         pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
-        pltu.axes_labels(ax,str(Inputs[trial]),'FR')
+        pltu.axes_labels(ax,str(Inputs[trial]),'PFC Up-V1')
         ax.set_title('PFC Up-V1')
     
         ax = axes[1,ti]
         ax.plot(range(200),np.mean( PFCrates[trial,:,p:p*2], axis=1), '-', linewidth=1)
         ax.plot(range(200), PFCrates[trial,:,p:p+5], '-', linewidth=0.5)
         pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
-        pltu.axes_labels(ax,str(Targets[trial]),'FR')
-        ax.set_title('PFC Up-V2')
+        pltu.axes_labels(ax,str(Targets[trial]),'Up-V2')
+        # ax.set_title('PFC Up-V2')
 
         ax = axes[2,ti]
         ax.plot(range(200),np.mean( PFCrates[trial,:,p*2:p*3], axis=1), '-', linewidth=1)
         ax.plot(range(200), PFCrates[trial,:,2*p:2*p+5], '-', linewidth=0.5)
         pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
-        pltu.axes_labels(ax,'','FR')
-        ax.set_title('PFC Down-V1')
+        pltu.axes_labels(ax,'','Down-V1')
+        # ax.set_title('PFC Down-V1')
 
         ax = axes[3,ti]
         ax.plot(range(200), MDrates[trial,:,:], '-', linewidth=1, alpha=0.7)
