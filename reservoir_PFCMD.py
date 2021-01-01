@@ -26,7 +26,7 @@ class PFCMD():
     def __init__(self,PFC_G,PFC_G_off,learning_rate,
                     noiseSD,tauError,plotFigs=True,saveData=False,args_dict={}):
         self.debug = False
-        # self.figure_format =  'EPS' # 'PNG'
+        # self.figure_format =  'EPS'
         self.figure_format =  'PNG'
         self.data_generator = data_generator(local_Ntrain = 10000)
         self.RNGSEED = args_dict['seed'] #1
@@ -35,16 +35,14 @@ class PFCMD():
         self.Nsub = 100 #It really is 200, but split across two populations                    # number of neurons per cue
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 8                    # number of blocks
+        self.Nblocks = 11                    # number of blocks
         self.trials_per_block = 500
         self.Nmd    = 2                     # number of MD cells.
-        self.xorTask = False                # use xor Task or simple 1:1 map task
-        # self.xorTask = True               # use xor Task or simple 1:1 map task
+        
         self.tactileTask = True             # Use the human tactile probabalistic task
         self.Ncues = 4 #self.Ncontexts *2   # number of input cues. Two for up cue, and two for down cue.
         self.Nneur = self.Nsub*(self.Ncues+1)# number of neurons
-        if self.xorTask: self.inpsPerContext = 4# number of cue combinations per task
-        else: self.inpsPerContext = 2
+        self.inpsPerContext = 2
         self.Nout = 2                       # number of outputs
         self.tau = 0.02
         self.dt = 0.001
@@ -96,7 +94,7 @@ class PFCMD():
         self.outFB = False                  # if outExternal, then whether feedback from output to reservoir
         self.noisePresent = True           # add noise to all reservoir units
 
-        self.positiveRates = False           # whether to clip rates to be only positive, G must also change
+        self.positiveRates = True           # whether to clip rates to be only positive, G must also change
         
         self.MDlearn = True                # whether MD should learn
                                             #  possibly to make task representations disjoint (not just orthogonal)
@@ -136,36 +134,13 @@ class PFCMD():
         #     self.wPFC2MD[contexti,self.Nsub*contexti*2:self.Nsub*(contexti+1)*2] = 1./self.Nsub
 
 
-        if self.MDEffectType == 'submult':
-            # working!
-            Gbase = PFC_G#0.75                      # determines also the cross-task recurrence
-            if self.MDstrength is None: MDval = 1.
-            elif self.MDstrength < 0.: MDval = 0.
-            else: MDval = self.MDstrength
-            # subtract across tasks (task with higher MD suppresses cross-tasks)
-            self.wMD2PFC = np.ones(shape=(self.Nneur,self.Nmd)) * (-10.) * MDval
-            for contexti in np.arange(self.Ncontexts):
-                self.wMD2PFC[self.Nsub*2*contexti:self.Nsub*2*(contexti+1),contexti] = 0.
-            self.useMult = True
-            # multiply recurrence within task, no addition across tasks
-            ## choose below option for cross-recurrence
-            ##  if you want "MD inactivated" (low recurrence) state
-            ##  as the state before MD learning
-            #self.wMD2PFCMult = np.zeros(shape=(self.Nneur,self.Nmd))
-            # choose below option for cross-recurrence
-            #  if you want "reservoir" (high recurrence) state
-            #  as the state before MD learning (makes learning more difficult)
-            self.wMD2PFCMult = np.ones(shape=(self.Nneur,self.Nmd)) \
-                                * PFC_G_off/Gbase * (1-MDval)
-            for contexti in np.arange(self.Ncontexts):
-                self.wMD2PFCMult[self.Nsub*2*contexti:self.Nsub*2*(contexti+1),contexti]\
-                            += PFC_G/Gbase * MDval
-            # threshold for sharp sigmoid (0.1 width) transition of MDinp
-            self.MDthreshold = 0.4
+        Gbase = PFC_G#0.75                      # determines also the cross-task recurrence
+        MDval = 1.
+        self.useMult = True
+            
+        # threshold for sharp sigmoid (0.1 width) transition of MDinp
+        self.MDthreshold = 0.4
 
-        # With MDeffect = True and MDstrength = 0, i.e. MD inactivated
-        #  PFC recurrence is (1+PFC_G_off)*Gbase = (1+1.5)*0.75 = 1.875
-        # So with MDeffect = False, ensure the same PFC recurrence for the pure reservoir
         if not self.MDeffect: Gbase = 1.875
 
         # Choose G based on the type of activation function
@@ -264,7 +239,7 @@ class PFCMD():
             self.fileDict = shelve.open('dataPFCMD/data_reservoir_PFC_MD'+\
                                     str(self.MDstrength)+\
                                     '_R'+str(self.RNGSEED)+\
-                                    ('_xor' if self.xorTask else '')+'.shelve')
+                                    ('')+'.shelve')
         
         self.meanAct = np.zeros(shape=(self.Ncontexts*self.inpsPerContext,\
                                     self.tsteps,self.Nneur))
@@ -313,6 +288,12 @@ class PFCMD():
             if MDeffect:
                 # MD decays 10x slower than PFC neurons,
                 #  so as to somewhat integrate PFC input
+                if self.use_context_belief_to_switch_MD: 
+                    #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                    # MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                    # MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 1 for cxt belief 1
+                    MDinp += np.array([0.2,-0.2]) if contexti==0 else np.array([-0.2,0.2]) 
+
                 if self.positiveRates:
                     MDinp +=  self.dt/self.tauMD * \
                             ( -MDinp + np.dot(self.wPFC2MD,rout) )
@@ -339,10 +320,6 @@ class PFCMD():
                     #  hardcoded for self.Nmd = 2
                     if MDinp[0] > MDinp[1]: MDout = np.array([1,0])
                     else: MDout = np.array([0,1])
-                    if self.use_context_belief_to_switch_MD: 
-                        #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
-                        # MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
-                        MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 0 for cxt belief 1
 
                     ########################################################
                     ########################################################
@@ -666,8 +643,8 @@ class PFCMD():
                 print('cue:', cue)
                 print('target:', target)
             #testing on the last 5 trials
-            if (blocki > self.Nblocks - 3) and (traini%self.trials_per_block ==0):
-                self.use_context_belief_to_switch_MD = True
+            if (blocki > self.Nblocks - 9) and (traini%self.trials_per_block ==0):
+                self.use_context_belief_to_switch_MD = False
                 self.get_v1_v2_from_ofc = True
                 self.no_of_trials_with_ofc_signal = 30 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
                 print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
@@ -744,14 +721,15 @@ class PFCMD():
                     f.write('{:.2f}\t'.format(score)) 
                 f.write('\n')
             
+
+            filename8=os.path.join(dirname, 'Corrects{}_{}')
+            np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
             if 1==2: # output massive weight and rate files
-                filename8=os.path.join(dirname, 'Corrects{}_Switch{}')
-                np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
                 import pickle
-                filehandler = open(os.path.join(dirname, 'Rates{}_Switch{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                filehandler = open(os.path.join(dirname, 'Rates{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
                 pickle.dump(rates, filehandler)
                 filehandler.close()
-                filehandler = open(os.path.join(dirname, 'Weights{}_Switch{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                filehandler = open(os.path.join(dirname, 'Weights{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
                 pickle.dump(weights, filehandler)
                 filehandler.close()
 
@@ -791,7 +769,7 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "switch_prob_runs", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("exp_name", default= "finals_switch_and_no_switch", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 30., nargs='?',  type=float, help="arg_1")
     group=parser.add_argument("y", default= 1, nargs='?', type=float, help="arg_2")
     group=parser.add_argument("z", default= 1.0, nargs='?', type=float, help="arg_2")
