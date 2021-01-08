@@ -17,10 +17,11 @@ class OFC:
     # If more than 1 errors occurs in the window, we switch
     # NOTE: Sabrina -- Alpha may need to be changed when I integrate into
     # the complete model
-    SWITCH_THRESH = 0.3
-    HORIZON_SZ = 15
 
-    def __init__(self):
+    def __init__(self, switch_thresh=0.3, horizon_sz=15):
+        self.switch_thresh = switch_thresh
+        self.horizon_sz = horizon_sz
+
         n = self.ASSOCIATION_RANGE_N
         self.prior = np.ones(n) / n  # Assume a uniform prior
         self.contexts = {}
@@ -113,15 +114,14 @@ class OFC:
 
             (v1, v2) = self.get_v()
 
-            if len(self.trial_type_history) < self.HORIZON_SZ:
+            if len(self.trial_type_history) < self.horizon_sz:
                 return
 
-            if len(self.trial_type_history) > self.HORIZON_SZ:
+            if len(self.trial_type_history) > self.horizon_sz:
                 trial_type = self.trial_type_history.pop(0)
                 self.prior = self.compute_posterior(trial_type)
 
             tt = [1 if x == "MATCH" else 0 for x in self.trial_type_history]
             delta = np.abs(np.mean(tt) - v1)
-            if delta > self.SWITCH_THRESH:
-                print("delta", delta)
+            if delta > self.switch_thresh:
                 return "SWITCH"
