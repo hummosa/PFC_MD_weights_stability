@@ -258,10 +258,10 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
     wOuts, wPFC2MDs, wMD2PFCs, wMD2PFCMults, wJrecs, MDpreTraces = weights
     xticks = [0, 1000, 2000, 3000, 4000]
     # plot output weights evolution
-    pfcmd.fig3, axes = plt.subplots(5,3)#, sharex=True) #, sharey=True)
-    # pfcmd.fig3.set_figheight = pltu.twocolumnwidth
-    # pfcmd.fig3.set_figwidth = pltu.twocolumnwidth
-    pfcmd.fig3.set_size_inches([9,9])
+    pfcmd.figWeights, axes = plt.subplots(5,3)#, sharex=True) #, sharey=True)
+    # pfcmd.figWeights.set_figheight = pltu.twocolumnwidth
+    # pfcmd.figWeights.set_figwidth = pltu.twocolumnwidth
+    pfcmd.figWeights.set_size_inches([9,9])
     plot_cue_v_subpop = True
     tpb = pfcmd.trials_per_block
     if plot_cue_v_subpop:
@@ -353,11 +353,11 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
     # axes[0,2].plot(wOuts[:,1,pfcmd.Nsub*2:pfcmd.Nsub*2+5],'tab:red', linewidth= pltu.linewidth)
     # pltu.beautify_plot(axes[0,2],x0min=False,y0min=False)
     # pltu.axes_labels(axes[0,2],'Trials','wCto0(r) wCto1(b)')
-    # # pfcmd.fig3.tight_layout()
+    # # pfcmd.figWeights.tight_layout()
 
     # if pfcmd.MDlearn:
     #     # plot PFC2MD weights evolution
-    #     # pfcmd.fig3 = plt.figure(
+    #     # pfcmd.figWeights = plt.figure(
     #                     # figsize=(pltu.twocolumnwidth,pltu.twocolumnwidth),
     #                     # facecolor='w')
     #     axes[1,0].plot(wPFC2MDs[:,0,:5],'tab:red', linewidth= pltu.linewidth)
@@ -375,7 +375,7 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         pltu.axes_labels(axes[1,2],'Trials','wRec1(r) wRec40(b)')
 
         # plot MD2PFC weights evolution
-        # pfcmd.fig3 = plt.figure(
+        # pfcmd.figWeights = plt.figure(
                         # figsize=(pltu.columnwidth,pltu.columnwidth), 
                         # facecolor='w')
         axes[2,0].plot(wMD2PFCs[:,:5,0],'r')
@@ -386,7 +386,7 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         axes[2,1].plot(wMD2PFCMults[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
         pltu.beautify_plot(axes[2,1],x0min=False,y0min=False)
         pltu.axes_labels(axes[2,1],'Trials','Mw MD0toA(r) 0->C (b)')
-        # pfcmd.fig3.tight_layout()
+        # pfcmd.figWeights.tight_layout()
         axes[3,0].plot(wMD2PFCs[:,:5,0],'tab:red', linewidth= pltu.linewidth)
         axes[3,0].plot(wMD2PFCs[:,pfcmd.Nsub*2:pfcmd.Nsub*2+5,0],'tab:red', linewidth= pltu.linewidth)
         pltu.beautify_plot(axes[3,0],x0min=False,y0min=False)
@@ -396,7 +396,7 @@ def plot_weights(pfcmd, weights, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(
         pltu.beautify_plot(axes[3,1],x0min=False,y0min=False)
         pltu.axes_labels(axes[3,1],'Trials','Mw MD1toA(r) 1->C (b)')
 
-    pfcmd.fig3.tight_layout()
+    pfcmd.figWeights.tight_layout()
 
 def plot_what_i_want(pfcmd, weights, rates, labels = ['wAto0(r) wAto1(b)', 'wBto0(r) wBto1(b)', 'wCto0(r) wCto1(b)']):
     PFCrates, MDinputs, MDrates, Outrates, Inputs, Targets, MSEs= rates

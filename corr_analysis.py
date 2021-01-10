@@ -32,8 +32,6 @@ comp_two_files = [os.path.join('./results/'+exp_name,file) for file in rates_fil
 for fi, file_name in tqdm(enumerate(comp_one_files)):
 
     filehandler = open(file_name, 'rb')
-    rate
-    
     
     
     

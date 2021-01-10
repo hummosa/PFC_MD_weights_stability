@@ -10,21 +10,21 @@ class data_generator():
         # '10': np.array([1. if (i+1)%10!=0 else 0. for i in range(local_Ntrain) ]),
         #  }
 
-        # self.non_matches = { # randomly sample non-matches (1.) with set probabilities
-        # '90': np.array([0. if np.random.rand()<0.9 else 1. for i in range(local_Ntrain) ]),
-        # '70': np.array([0. if np.random.rand()<0.7 else 1. for i in range(local_Ntrain)  ]),
-        # '50': np.array([0. if np.random.rand()<0.5 else 1. for i in range(local_Ntrain)  ]),
-        # '20': np.array([1. if np.random.rand()<0.7 else 0. for i in range(local_Ntrain)  ]),
-        # '10': np.array([1. if np.random.rand()<0.9 else 0. for i in range(local_Ntrain) ]),
-        #  }
-        # Trick the model by giving other associations levels
         self.non_matches = { # randomly sample non-matches (1.) with set probabilities
-        '90': np.array([0. if np.random.rand()<0.9 else 1. for i in range(1500) ] + [0. if np.random.rand()<0.7 else 1. for i in range(500)  ] + [0. if np.random.rand()<0.9 else 1. for i in range(local_Ntrain-2000) ]),
+        '90': np.array([0. if np.random.rand()<0.9 else 1. for i in range(local_Ntrain) ]),
         '70': np.array([0. if np.random.rand()<0.7 else 1. for i in range(local_Ntrain)  ]),
         '50': np.array([0. if np.random.rand()<0.5 else 1. for i in range(local_Ntrain)  ]),
         '20': np.array([1. if np.random.rand()<0.7 else 0. for i in range(local_Ntrain)  ]),
-        '10': np.array([1. if np.random.rand()<0.9 else 0. for i in range(2000) ] + [0. if np.random.rand()<0.5 else 1. for i in range(500)  ] + [1. if np.random.rand()<0.9 else 0. for i in range(local_Ntrain- 2500) ]),
+        '10': np.array([1. if np.random.rand()<0.9 else 0. for i in range(local_Ntrain) ]),
          }
+        # Trick the model by giving other associations levels
+        # self.non_matches = { # randomly sample non-matches (1.) with set probabilities
+        # '90': np.array([0. if np.random.rand()<0.9 else 1. for i in range(1500) ] + [0. if np.random.rand()<0.7 else 1. for i in range(500)  ] + [0. if np.random.rand()<0.9 else 1. for i in range(local_Ntrain-2000) ]),
+        # '70': np.array([0. if np.random.rand()<0.7 else 1. for i in range(local_Ntrain)  ]),
+        # '50': np.array([0. if np.random.rand()<0.5 else 1. for i in range(local_Ntrain)  ]),
+        # '20': np.array([1. if np.random.rand()<0.7 else 0. for i in range(local_Ntrain)  ]),
+        # '10': np.array([1. if np.random.rand()<0.9 else 0. for i in range(2000) ] + [0. if np.random.rand()<0.5 else 1. for i in range(500)  ] + [1. if np.random.rand()<0.9 else 0. for i in range(local_Ntrain- 2500) ]),
+        #  }
 
         self.task_data_gen = {
         0: self.trial_generator(self.non_matches['90']),

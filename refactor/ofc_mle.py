@@ -41,12 +41,24 @@ class OFC:
 class OFC_dumb:
     ASSOCIATION_RANGE = np.linspace(0, 1, 2)
 
-    def __init__(self, horizon):
+    def __init__(self, config):
+        self.config = config
         self.contexts = {}
         self.ctx = None
         self.prior = np.array([0.5, 0.5])
-        self.horizon = horizon
+        self.horizon = config.horizon
         self.trial_history = [np.array([0.5,0.5])] *2
+
+        self.follow = 'behavioral_context' # 'association_levels'
+        if self.follow == 'association_levels':
+            contexts = 5
+            self.association_levels_ids = {'90':0, '70':1, '50':2, '30':3, '10':4}
+        elif self.follow == 'behavioral_context':
+            contexts = 2
+            self.match_association_levels = {'90', '70', '50'}
+                
+        self.baseline_err = np.zeros(shape=contexts)
+
 
     def get_v(self):
         return (np.array(self.prior))
@@ -68,4 +80,29 @@ class OFC_dumb:
         # print(self.trial_history, posterior)
         
         self.prior = posterior
+
+    def get_trial_err(self, errors):
+        # error calc
+        if self.config.response_delay:
+            response_start = self.config.cuesteps + self.config.response_delay
+            errorEnd = np.mean(errors[response_start:]*errors[response_start:]) 
+        else:
+            errorEnd = np.mean(errors*errors) # errors is [tsteps x Nout]
+
+        all_contexts_err = np.array([errorEnd, 1-errorEnd]) if cid==0. else np.array([errorEnd-1, errorEnd ])
+        return (errorEnd, all_contexts_err)
+        
+    def update_baseline_err(self, association_level, trial_err):
+        if self.config.follow == 'association_levels':
+            cid = self.association_levels_ids[association_level]
+        elif self.follow == 'behavioral_context':
+            if association_level in self.match_association_levels:
+                cid = 0 # Match context
+            else: cid = 1 # Non-Match context
+
+        self.baseline_err =  (1.0 - self.config.decayErrorPerTrial) * self.baseline_err + \
+                 self.config.decayErrorPerTrial * trial_err
+
+        return self.baseline_err
+
 

@@ -643,9 +643,9 @@ class PFCMD():
 
             #testing on the last 5 trials
             self.get_v1_v2_from_ofc = True
-            self.no_of_trials_with_ofc_signal = int(args_dict['switches']) #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
+            self.no_of_trials_with_ofc_signal = 200 #int(args_dict['switches']) #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
             if (blocki > self.Nblocks - 8) and ((traini%self.trials_per_block) < self.no_of_trials_with_ofc_signal):
-                self.use_context_belief_to_switch_MD = True#bool(args_dict['switches'])
+                self.use_context_belief_to_switch_MD = bool(args_dict['switches'])
                 print(f'traini: {traini}')
                 # import pdb; pdb.set_trace()    
             else:
@@ -704,7 +704,7 @@ class PFCMD():
             filename4=os.path.join(dirname, 'fig_monitored_{}_{}.'+self.figure_format)
             filename5=os.path.join(dirname, 'fig_trials_{}_{}.'+self.figure_format)
             filename6=os.path.join(dirname, 'fig_custom_{}_{}.'+self.figure_format)
-            self.fig3.savefig     (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+            self.figWeights.savefig     (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
             self.figOuts.savefig  (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
             self.figRates.savefig (filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
             self.fig_monitor = plt.figure()
@@ -729,7 +729,7 @@ class PFCMD():
             
 
             filename8=os.path.join(dirname, 'Corrects{}_{}')
-            # np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
+            np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
             if 1==2: # output massive weight and rate files
                 import pickle
                 filehandler = open(os.path.join(dirname, 'Rates{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
