@@ -58,6 +58,7 @@ class OFC_dumb:
             self.match_association_levels = {'90', '70', '50'}
                 
         self.baseline_err = np.zeros(shape=contexts)
+        self.Q_values = [0., 0.]
 
 
     def get_v(self):
@@ -81,8 +82,18 @@ class OFC_dumb:
         
         self.prior = posterior
 
-    def get_trial_err(self, errors):
+    def get_cid(self, association_level):
+        if self.config.follow == 'association_levels':
+            cid = self.association_levels_ids[association_level]
+        elif self.follow == 'behavioral_context':
+            if association_level in self.match_association_levels:
+                cid = 0 # Match context
+            else: cid = 1 # Non-Match context
+        return (cid)
+
+    def get_trial_err(self, errors, association_level):
         # error calc
+        cid = self.get_cid(association_level)
         if self.config.response_delay:
             response_start = self.config.cuesteps + self.config.response_delay
             errorEnd = np.mean(errors[response_start:]*errors[response_start:]) 
@@ -92,13 +103,7 @@ class OFC_dumb:
         all_contexts_err = np.array([errorEnd, 1-errorEnd]) if cid==0. else np.array([errorEnd-1, errorEnd ])
         return (errorEnd, all_contexts_err)
         
-    def update_baseline_err(self, association_level, trial_err):
-        if self.config.follow == 'association_levels':
-            cid = self.association_levels_ids[association_level]
-        elif self.follow == 'behavioral_context':
-            if association_level in self.match_association_levels:
-                cid = 0 # Match context
-            else: cid = 1 # Non-Match context
+    def update_baseline_err(self, trial_err):
 
         self.baseline_err =  (1.0 - self.config.decayErrorPerTrial) * self.baseline_err + \
                  self.config.decayErrorPerTrial * trial_err

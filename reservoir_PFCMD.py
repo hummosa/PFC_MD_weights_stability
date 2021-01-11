@@ -19,7 +19,11 @@ cuda = False
 if cuda: import torch
 
 from refactor.ofc_mle import OFC, OFC_dumb
-ofc = OFC_dumb(horizon=40)
+class Config():
+    horizon = 40
+config = Config()
+
+ofc = OFC_dumb(config)
 ofc.set_context("0.7")
 
 class PFCMD():

@@ -19,20 +19,17 @@ class data_generator():
         out = inp if np.random.uniform() < prob else (1 - inp)
         return (np.array([inp, 1-inp]), np.array([out, 1-out]))
 
-    def block_generator(self):
+    def block_generator(self,blocki):
         self.association_levels = np.array(['90', '70', '50', '30', '10'])
-        if self.training_schedule is not None:
-            self.block_schedule = ['90', '10','90', '10','90', '30', '70', '10', '50', '90']
+        if self.training_schedule is None:
+            self.block_schedule = ['90', '10','90', '10','90', '30', '70', '10', '50', '10']
             self.ofc_control_schedule= ['off'] *5 + ['match', 'non-match'] *3
             
         else:
             self.block_schedule=self.training_schedule
         self.strategy_schedule = ['match' if bs in ['90', '70', '50'] else 'non-match' for bs in self.block_schedule]
-        i = 0
-        while True:
-            if i < len(self.block_schedule):
-                yield (self.block_schedule[i], self.ofc_control_schedule[i])
-            else:
-                yield (np.random.choice(self.association_levels), 'off')
-            i+=1
+        if blocki < len(self.block_schedule):
+            yield (self.block_schedule[blocki], self.ofc_control_schedule[blocki])
+        else:
+            yield (np.random.choice(self.association_levels), 'off')
             
