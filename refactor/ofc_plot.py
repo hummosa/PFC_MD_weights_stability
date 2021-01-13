@@ -5,7 +5,7 @@ from ofc_error import OFC as OFC_Error
 from ofc_trailtype import OFC as OFC_Trial
 from ofc_mle import OFC as OFC_MLE
 
-ASSOCIATION_LEVELS = [0.9, 0.1, 0.7, 0.3, 0.5]
+ASSOCIATION_LEVELS = [0.9, 0.1]
 N_BLOCKS = 10
 BLOCK_SIZE = 500
 
@@ -27,8 +27,6 @@ for n in range(N_BLOCKS):
         if i == 0:
             continue
 
-        # stimulus = stimuli[i, :]
-        # target = targets[i, :]
         stimulus = np.array([1., 0.] if random.random() < 0.5 else [0., 1.])
         target = np.array(stimulus if random.random() <
                           a_level else abs(stimulus - 1))
