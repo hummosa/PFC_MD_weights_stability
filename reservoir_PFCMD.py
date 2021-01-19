@@ -5,6 +5,7 @@
 
 from refactor.ofc_trailtype import OFC as OFC_Trial
 import os
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 # plt.ion()
@@ -25,6 +26,8 @@ if cuda:
 
 ofc = OFC_Trial()
 
+RUN_ID = "011921_file-per-trial"
+
 
 class PFCMD():
     def __init__(self, PFC_G, PFC_G_off, learning_rate,
@@ -40,50 +43,62 @@ class PFCMD():
 
         self.debug = False
         # self.figure_format =  'EPS'
-        self.figure_format =  'PNG'
-        self.data_generator = data_generator(local_Ntrain = 10000)
-        self.RNGSEED = args_dict['seed'] #1
+        self.figure_format = 'PNG'
+        self.data_generator = data_generator(local_Ntrain=10000)
+        self.RNGSEED = args_dict['seed']  # 1
         np.random.seed([self.RNGSEED])
-        self.args = args_dict # dict of args label:value
-        self.Nsub = 100 #It really is 200, but split across two populations                    # number of neurons per cue
-        self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
-        self.Ncontexts = 2                  # number of contexts (match block or non-match block)
+        self.args = args_dict  # dict of args label:value
+        self.Nsub = 100  # It really is 200, but split across two populations                    # number of neurons per cue
+        # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts
+        self.Ntasks = 2
+        # number of contexts (match block or non-match block)
+        self.Ncontexts = 2
         self.Nblocks = 11                    # number of blocks
         self.trials_per_block = 500
-        self.Nmd    = 2                     # number of MD cells.
-        
+        self.Nmd = 2                     # number of MD cells.
+
         self.tactileTask = True             # Use the human tactile probabalistic task
-        self.Ncues = 4 #self.Ncontexts *2   # number of input cues. Two for up cue, and two for down cue.
-        self.Nneur = self.Nsub*(self.Ncues+1)# number of neurons
+        # self.Ncontexts *2   # number of input cues. Two for up cue, and two for down cue.
+        self.Ncues = 4
+        self.Nneur = self.Nsub*(self.Ncues+1)  # number of neurons
         self.inpsPerContext = 2
         self.Nout = 2                       # number of outputs
         self.tau = 0.02
         self.dt = 0.001
         self.tsteps = 200                   # number of timesteps in a trial
         self.cuesteps = 100                 # number of time steps for which cue is on
-        self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
+        # 50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
+        self.delayed_response = 0
         self.noiseSD = noiseSD
         self.saveData = saveData
 
-        self.learning_rate = learning_rate  # too high a learning rate makes the output weights
-                                            #  change too much within a trial / training cycle,
-                                            #  then the output interference depends
-                                            #  on the order of cues within a cycle
-                                            # typical values is 1e-5, can vary from 1e-4 to 1e-6
-        self.training_schedule = lambda x: x%self.Ncontexts 
-        # self.training_schedule = self.data_generator.training_schedule 
-                                            # Creates a training_schedule. Specifies task context for each block 
-                                            # Currently just loops through available contexts
-        self.tauError = tauError            # smooth the error a bit, so that weights don't fluctuate
-        self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
+        # too high a learning rate makes the output weights
+        self.learning_rate = learning_rate
+        #  change too much within a trial / training cycle,
+        #  then the output interference depends
+        #  on the order of cues within a cycle
+        # typical values is 1e-5, can vary from 1e-4 to 1e-6
+        self.training_schedule = lambda x: x % self.Ncontexts
+        # self.training_schedule = self.data_generator.training_schedule
+        # Creates a training_schedule. Specifies task context for each block
+        # Currently just loops through available contexts
+        # smooth the error a bit, so that weights don't fluctuate
+        self.tauError = tauError
+        # Assumes PFC modules and pass input to only one module per tempral context.
+        self.modular = False
         self.MDeffect = True                # whether to have MD present or not
         self.MDamplification = 25.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
-        self.MDlearningrate = 5e-5 #1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
-        self.MDrange = 0.1                  # Allowable range for MD-PFC synapses.
-        self.MDlearningBias = 0.3           # threshold for Hebbian learning. Biases pre*post activity.
-        self.MDlearningBiasFactor = 1.     # Switched dynamic Bias calc based on average, this gets multiplied with running avg resulting in effective bias for hebbian learning.
-        self.MDEffectType = 'submult'       # MD subtracts from across tasks and multiplies within task
-        
+        # 1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
+        self.MDlearningrate = 5e-5
+        # Allowable range for MD-PFC synapses.
+        self.MDrange = 0.1
+        # threshold for Hebbian learning. Biases pre*post activity.
+        self.MDlearningBias = 0.3
+        # Switched dynamic Bias calc based on average, this gets multiplied with running avg resulting in effective bias for hebbian learning.
+        self.MDlearningBiasFactor = 1.
+        # MD subtracts from across tasks and multiplies within task
+        self.MDEffectType = 'submult'
+
         # OFC
         # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         self.OFC_reward_hx = True
@@ -94,16 +109,25 @@ class PFCMD():
             # Recent reward accumulator for each context
             self.recent_error = np.zeros(self.Ncontexts)
             self.recent_error_history = []  # List to keep track of entire error history
-            self.decayRewardPerTrial = 0.1 # NOT in use yet  # how to decay the mean reward by, per trial
-            self.use_context_belief =True  # input routing per current context or per context belief
-            self.get_v1_v2_from_ofc = False # 
-            self.use_context_belief_to_route_input =False  # input routing per current context or per context belief
-            self.use_context_belief_to_switch_MD = False  # input routing per current context or per context belief
-            self.use_recent_reward_to_pfc_inputs = True  # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
-            self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
-            self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
-            self.wV_structured  = True      # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
-        self.dirConn = False                # direct connections from cue to output, also learned
+            # NOT in use yet  # how to decay the mean reward by, per trial
+            self.decayRewardPerTrial = 0.1
+            # input routing per current context or per context belief
+            self.use_context_belief = True
+            self.get_v1_v2_from_ofc = False
+            # input routing per current context or per context belief
+            self.use_context_belief_to_route_input = False
+            # input routing per current context or per context belief
+            self.use_context_belief_to_switch_MD = False
+            # Adds direct input to PFC carrying recent reward info for match vs. non-match strategeis.
+            self.use_recent_reward_to_pfc_inputs = True
+            # no of trials with OFC sparse switch control signal.
+            self.no_of_trials_with_ofc_signal = 5
+            # list of block i and no of trials with ofc signals for later plotting.
+            self.hx_of_ofc_signal_lengths = []
+            # Providers structured v1 v2 input to corrosponding half of sensory cue neurons
+            self.wV_structured = True
+        # direct connections from cue to output, also learned
+        self.dirConn = False
         self.outExternal = True             # True: output neurons are external to the PFC
         #  (i.e. weights to and fro (outFB) are not MD modulated)
         # False: last self.Nout neurons of PFC are output neurons
@@ -149,23 +173,25 @@ class PFCMD():
             if self.reinforceReservoir:
                 self.perturbProb /= 10
 
-        self.monitor = monitor(['context_belief', 'error_cxt1', 'error_cxt2', 'error_dif']) #monior class to track vars of interest
-        
-        ## init weights: 
-        self.wPFC2MD = np.zeros(shape=(self.Nmd,self.Nneur))
-        
+        # monior class to track vars of interest
+        self.monitor = monitor(
+            ['context_belief', 'error_cxt1', 'error_cxt2', 'error_dif'])
+
+        # init weights:
+        self.wPFC2MD = np.zeros(shape=(self.Nmd, self.Nneur))
+
         # for contexti in np.arange(self.Nmd):
         #     self.wPFC2MD[contexti,self.Nsub*contexti*2:self.Nsub*(contexti+1)*2] = 1./self.Nsub
 
-
-        Gbase = PFC_G#0.75                      # determines also the cross-task recurrence
+        Gbase = PFC_G  # 0.75                      # determines also the cross-task recurrence
         MDval = 1.
         self.useMult = True
-            
+
         # threshold for sharp sigmoid (0.1 width) transition of MDinp
         self.MDthreshold = 0.4
 
-        if not self.MDeffect: Gbase = 1.875
+        if not self.MDeffect:
+            Gbase = 1.875
 
         # Choose G based on the type of activation function
         # unclipped activation requires lower G than clipped activation,
@@ -212,7 +238,7 @@ class PFCMD():
             with torch.no_grad():
                 self.Jrec -= torch.mean(self.Jrec, dim=1, keepdim=True)
         else:
-            self.Jrec -= np.mean(self.Jrec,axis=1)[:,np.newaxis]
+            self.Jrec -= np.mean(self.Jrec, axis=1)[:, np.newaxis]
 
         # I don't want to have an if inside activation
         #  as it is called at each time step of the simulation
@@ -231,12 +257,15 @@ class PFCMD():
                 return np.tanh(inp)
         self.__class__.activation = activation
 
-        #wIn = np.random.uniform(-1,1,size=(self.Nneur,self.Ncues))
-        self.wV = np.zeros((self.Nneur,2))
-        self.wIn = np.zeros((self.Nneur,self.Ncues))
-        self.cueFactor = 0.5#args_dict['CueFactor']#0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
-        if self.positiveRates: lowcue,highcue = 0.5,1.
-        else: lowcue,highcue = -1.,1
+        # wIn = np.random.uniform(-1,1,size=(self.Nneur,self.Ncues))
+        self.wV = np.zeros((self.Nneur, 2))
+        self.wIn = np.zeros((self.Nneur, self.Ncues))
+        # args_dict['CueFactor']#0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
+        self.cueFactor = 0.5
+        if self.positiveRates:
+            lowcue, highcue = 0.5, 1.
+        else:
+            lowcue, highcue = -1., 1
         for cuei in np.arange(self.Ncues):
             self.wIn[self.Nsub*cuei:self.Nsub*(cuei+1), cuei] = \
                 np.random.uniform(lowcue, highcue, size=self.Nsub) \
@@ -251,41 +280,42 @@ class PFCMD():
 
             else:
                 input_variance = 1.5
-                self.wV = np.random.normal(size=(self.Nneur, 2 ), loc=(lowcue+highcue)/2, scale=input_variance) *self.cueFactor # weights of value input to pfc
+                self.wV = np.random.normal(size=(self.Nneur, 2), loc=(
+                    lowcue+highcue)/2, scale=input_variance) * self.cueFactor  # weights of value input to pfc
                 self.wV = np.clip(self.wV, 0, 1)
-                self.wIn = np.random.normal(size=(self.Nneur, self.Ncues), loc=(lowcue+highcue)/2, scale=input_variance) *self.cueFactor 
+                self.wIn = np.random.normal(size=(self.Nneur, self.Ncues), loc=(
+                    lowcue+highcue)/2, scale=input_variance) * self.cueFactor
                 self.wIn = np.clip(self.wIn, 0, 1)
 
         # wDir and wOut are set in the main training loop
-        self.cue_eigvecs = np.zeros((self.Ncues,self.Nneur))
+        self.cue_eigvecs = np.zeros((self.Ncues, self.Nneur))
         self.plotFigs = plotFigs
         self.cuePlot = (0, 0)
 
         if self.saveData:
-            self.fileDict = shelve.open('dataPFCMD/data_reservoir_PFC_MD'+\
-                                    str(self.MDstrength)+\
-                                    '_R'+str(self.RNGSEED)+\
-                                    ('')+'.shelve')
-        
-        self.meanAct = np.zeros(shape=(self.Ncontexts*self.inpsPerContext,\
-                                    self.tsteps,self.Nneur))
-        
-        #Initializing weights here instead
-        self.wOut = np.random.uniform(-1,1,
-                        size=(self.Nout,self.Nneur))/self.Nneur
+            self.fileDict = shelve.open('dataPFCMD/data_reservoir_PFC_MD' +
+                                        str(self.MDstrength) +
+                                        '_R'+str(self.RNGSEED) +
+                                        ('')+'.shelve')
 
+        self.meanAct = np.zeros(shape=(self.Ncontexts*self.inpsPerContext,
+                                       self.tsteps, self.Nneur))
 
-    def sim_cue(self,contexti,cuei,cue,target,MDeffect=True,
-                    MDCueOff=False,MDDelayOff=False,
-                    train=True,routsTarget=None):
+        # Initializing weights here instead
+        self.wOut = np.random.uniform(-1, 1,
+                                      size=(self.Nout, self.Nneur))/self.Nneur
+
+    def sim_cue(self, contexti, cuei, cue, target, MDeffect=True,
+                MDCueOff=False, MDDelayOff=False,
+                train=True, routsTarget=None):
         '''
         self.reinforce trains output weights
          using REINFORCE / node perturbation a la Miconi 2017.'''
         cues = np.zeros(shape=(self.tsteps, self.Ncues))
 
-        xinp = np.random.uniform(0,0.1,size=(self.Nneur))
+        xinp = np.random.uniform(0, 0.1, size=(self.Nneur))
         xadd = np.zeros(shape=(self.Nneur))
-        MDinp = np.random.uniform(0,0.1,size=self.Nmd)
+        MDinp = np.random.uniform(0, 0.1, size=self.Nmd)
         MDinps = np.zeros(shape=(self.tsteps, self.Nmd))
         routs = np.zeros(shape=(self.tsteps, self.Nneur))
         MDouts = np.zeros(shape=(self.tsteps, self.Nmd))
@@ -296,7 +326,7 @@ class PFCMD():
         errors_other = np.zeros(shape=(self.tsteps, self.Nout))
         error_smooth = np.zeros(shape=self.Nout)
         if self.reinforce:
-            HebbTrace = np.zeros(shape=(self.Nout,self.Nneur))
+            HebbTrace = np.zeros(shape=(self.Nout, self.Nneur))
             if self.reinforceReservoir:
                 if cuda:
                     HebbTraceRec = torch.Tensor(
@@ -309,17 +339,18 @@ class PFCMD():
 
         for i in range(self.tsteps):
             rout = self.activation(xinp)
-            routs[i,:] = rout
-            outAdd = np.dot(self.wOut,rout)
+            routs[i, :] = rout
+            outAdd = np.dot(self.wOut, rout)
 
             if MDeffect:
                 # MD decays 10x slower than PFC neurons,
                 #  so as to somewhat integrate PFC input
-                if self.use_context_belief_to_switch_MD: 
-                    #MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
+                if self.use_context_belief_to_switch_MD:
+                    # MDout = np.array([0,1]) if self.current_context_belief==0 else np.array([1,0]) #MD 0 for cxt belief 1
                     # MDout = np.array([0,1]) if contexti==0 else np.array([1,0]) #MD 0 for cxt belief 1
                     # MDout = np.array([1,0]) if contexti==0 else np.array([0,1]) #MD 1 for cxt belief 1
-                    MDinp += np.array([0.2,-0.2]) if contexti==0 else np.array([-0.2,0.2]) 
+                    MDinp += np.array([0.2, -0.2]
+                                      ) if contexti == 0 else np.array([-0.2, 0.2])
 
                 if self.positiveRates:
                     MDinp += self.dt/self.tauMD * \
@@ -345,8 +376,10 @@ class PFCMD():
                     # MDout = (np.tanh(MDinp-self.MDthreshold) + 1) / 2.
                     # winner take all on the MD
                     #  hardcoded for self.Nmd = 2
-                    if MDinp[0] > MDinp[1]: MDout = np.array([1,0])
-                    else: MDout = np.array([0,1])
+                    if MDinp[0] > MDinp[1]:
+                        MDout = np.array([1, 0])
+                    else:
+                        MDout = np.array([0, 1])
 
                     ########################################################
                     ########################################################
@@ -462,10 +495,10 @@ class PFCMD():
 
             if self.noisePresent:
                 xinp += np.random.normal(size=(self.Nneur))*self.noiseSD \
-                            * np.sqrt(self.dt)/self.tau
-            
+                    * np.sqrt(self.dt)/self.tau
+
             outInp += self.dt/self.tau * (-outInp + outAdd)
-            out = self.activation(outInp)                
+            out = self.activation(outInp)
 
             error = out - target
             errors[i, :] = error
@@ -475,7 +508,7 @@ class PFCMD():
             if train:
                 if self.reinforce:
                     # note: rout is the activity vector for previous time step
-                    HebbTrace += np.outer(perturbation,rout)
+                    HebbTrace += np.outer(perturbation, rout)
                     if self.reinforceReservoir:
                         if cuda:
                             with torch.no_grad():
@@ -488,8 +521,8 @@ class PFCMD():
                 else:
                     # error-driven i.e. error*pre (perceptron like) learning
                     self.wOut += -self.learning_rate \
-                                    * np.outer(error_smooth,rout)
-   
+                        * np.outer(error_smooth, rout)
+
         # inpi = contexti*self.inpsPerContext + cuei
         inpi = contexti
         if train and self.reinforce:
@@ -505,8 +538,8 @@ class PFCMD():
                 errorEnd = np.mean(errors*errors)  # errors is [tsteps x Nout]
 
             self.wOut -= self.learning_rate * \
-                    (errorEnd-self.meanErrors[inpi]) * \
-                        HebbTrace #* self.meanErrors[inpi]
+                (errorEnd-self.meanErrors[inpi]) * \
+                HebbTrace  # * self.meanErrors[inpi]
 
             if self.reinforceReservoir:
                 if cuda:
@@ -524,15 +557,17 @@ class PFCMD():
                     HebbTraceMD * \
                     10.  # changes too small Ali amplified #* self.meanErrors[inpi]
                 self.wMD2PFC -= self.learning_rate * \
-                        (errorEnd-self.meanErrors[inpi]) * \
-                            HebbTraceMD.T * 10. #* self.meanErrors[inpi]  
-                                          
-            if self.MDlearn: # after all Hebbian learning within trial and reinforce after trial, re-center MD2PFC and PFC2MD weights This will introduce 
-                #synaptic competition both ways.
-                self.wMD2PFC = MDweightdecay* (self.wMD2PFC)
-                self.wPFC2MD = MDweightdecay* (self.wPFC2MD)
-                self.wPFC2MD /= np.linalg.norm(self.wPFC2MD)/ self.initial_norm_wPFC2MD
-                self.wMD2PFC /= np.linalg.norm(self.wMD2PFC)/ self.initial_norm_wMD2PFC
+                    (errorEnd-self.meanErrors[inpi]) * \
+                    HebbTraceMD.T * 10.  # * self.meanErrors[inpi]
+
+            if self.MDlearn:  # after all Hebbian learning within trial and reinforce after trial, re-center MD2PFC and PFC2MD weights This will introduce
+                # synaptic competition both ways.
+                self.wMD2PFC = MDweightdecay * (self.wMD2PFC)
+                self.wPFC2MD = MDweightdecay * (self.wPFC2MD)
+                self.wPFC2MD /= np.linalg.norm(self.wPFC2MD) / \
+                    self.initial_norm_wPFC2MD
+                self.wMD2PFC /= np.linalg.norm(self.wMD2PFC) / \
+                    self.initial_norm_wMD2PFC
 
                 # self.wMD2PFC -= np.mean(self.wMD2PFC)
                 # self.wMD2PFC *= self.G/np.sqrt(self.Nsub*2)/np.std(self.wMD2PFC) # div weights by their std to get normalized dist, then mul it by desired std
@@ -584,7 +619,6 @@ class PFCMD():
             self.save_vals["target"] = np.concatenate(
                 (self.save_vals["target"], [target]), axis=0)
 
-
         self.meanAct[inpi, :, :] += routs
 
         # TODO Flip belief about context if recent errors differ more than a threshold:
@@ -603,7 +637,7 @@ class PFCMD():
 
     def get_cue_target(self, contexti, cuei):
         cue = np.zeros(self.Ncues)
-        
+
         if self.tactileTask:
             cue = np.zeros(self.Ncues)  # reset cue
             cuei = np.random.randint(0, 2)  # up or down
@@ -619,12 +653,12 @@ class PFCMD():
                     cue[self.current_context_belief*2 +
                         cuei] = 1.  # Pass cue according to context belief
                 else:
-                    cue[0+cuei] = 1. # Pass cue to the first PFC region 
+                    cue[0+cuei] = 1.  # Pass cue to the first PFC region
             else:
-                cue[0+cuei] = 1. # Pass cue to the first PFC region 
-                cue[2+cuei] = 1. # Pass cue to the second PFC region
-            
-            target = np.array((1.,0.)) if targeti==0  else np.array((0.,1.))
+                cue[0+cuei] = 1.  # Pass cue to the first PFC region
+                cue[2+cuei] = 1.  # Pass cue to the second PFC region
+
+            target = np.array((1., 0.)) if targeti == 0 else np.array((0., 1.))
 
         return cue, target
 
@@ -687,29 +721,35 @@ class PFCMD():
             else:
                 blocki = traini // (learning_cycles_per_task)
                 # USE context beliefe
-                contexti = self.training_schedule(blocki)# Get the context index for this current block
+                # Get the context index for this current block
+                contexti = self.training_schedule(blocki)
                 # if traini % learning_cycles_per_task == 0:
-                    # contexti = next(self.data_generator.training_schedule_gen)# Get the context index for this current block
-                    # print('context i: ', contexti)
-                cueList = self.get_cue_list(contexti=contexti) # Get all the possible cue combinations for the current context
-            cues_order = self.get_cues_order(cueList) # randomly permute them. 
-            
-            contexti,cuei = cues_order[0] # No need for this loop, just pick the first cue, this list is ordered randomly
+                # contexti = next(self.data_generator.training_schedule_gen)# Get the context index for this current block
+                # print('context i: ', contexti)
+                # Get all the possible cue combinations for the current context
+                cueList = self.get_cue_list(contexti=contexti)
+            cues_order = self.get_cues_order(cueList)  # randomly permute them.
+
+            # No need for this loop, just pick the first cue, this list is ordered randomly
+            contexti, cuei = cues_order[0]
             cue, target = \
-                self.get_cue_target(contexti,cuei)
+                self.get_cue_target(contexti, cuei)
             if self.debug:
                 print('cue:', cue)
                 print('target:', target)
-            #testing on the last 5 trials
-            if (blocki > self.Nblocks - 9) and (traini%self.trials_per_block ==0):
+            # testing on the last 5 trials
+            if (blocki > self.Nblocks - 9) and (traini % self.trials_per_block == 0):
                 self.use_context_belief_to_switch_MD = False
                 self.get_v1_v2_from_ofc = True
-                self.no_of_trials_with_ofc_signal = 30 #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
-                print('for block: {}, no of trials of ofc signal was: {}'.format(blocki, self.no_of_trials_with_ofc_signal))
-                self.hx_of_ofc_signal_lengths.append((blocki, self.no_of_trials_with_ofc_signal))
+                # lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
+                self.no_of_trials_with_ofc_signal = 30
+                print('for block: {}, no of trials of ofc signal was: {}'.format(
+                    blocki, self.no_of_trials_with_ofc_signal))
+                self.hx_of_ofc_signal_lengths.append(
+                    (blocki, self.no_of_trials_with_ofc_signal))
             cues, routs, outs, MDouts, MDinps, errors = \
-                self.sim_cue(contexti,cuei,cue,target,MDeffect=MDeffect,
-                train=True)
+                self.sim_cue(contexti, cuei, cue, target, MDeffect=MDeffect,
+                             train=True)
 
             PFCrates[traini, :, :] = routs
             MDinputs[traini, :, :] = MDinps
@@ -732,6 +772,37 @@ class PFCMD():
                     # saving the whole rec is too large, 1000*1000*2200
                     wJrecs[traini, :, :] = self.Jrec[:40,
                                                      0:25:1000].detach().cpu().numpy()
+
+            # NOTE: Is there a better way to save this without calling `tolist()` on every matrix?
+            if False:
+                trial_weights = {
+                    "w_outputs": wOuts[traini].tolist(),
+                    "w_PFC2MD": wPFC2MDs[traini].tolist(),
+                    "w_MD2PFCs": wMD2PFCs[traini].tolist(),
+                    "w_MD2PFC_mults": wMD2PFCMults[traini].tolist(),
+                    "w_Jrecs": wJrecs[traini].tolist(),
+                    "w_MD_pretraces": MDpreTraces[traini].tolist()
+                }
+                trial_rates = {
+                    "r_PFC": PFCrates[traini].tolist(),
+                    "MD_input": MDinputs[traini].tolist(),
+                    "r_MD": MDrates[traini].tolist(),
+                    "r_output": Outrates[traini].tolist(),
+                }
+                trial_data = {
+                    "input": Inputs[traini].tolist(),
+                    "target": Targets[traini].tolist(),
+                    "mse": MSEs[traini]
+                }
+
+                d = f"results/{self.args['exp_name']}"
+                if not os.path.exists(d):
+                    os.makedirs(d)
+                with open(f'{d}/{traini}.json', 'w') as outfile:
+                    json.dump({"trial_data": trial_data,
+                               "network_weights": trial_weights,
+                               "network_rates": trial_rates}, outfile)
+
         self.meanAct /= Ntrain
 
         if self.saveData:
@@ -754,53 +825,69 @@ class PFCMD():
             parm_summary = str(list(self.args.values())[
                 0])+"_"+str(list(self.args.values())[1])+"_"+str(list(self.args.values())[2])
             if not os.path.exists(dirname):
-                    os.makedirs(dirname)
-            filename1=os.path.join(dirname, 'fig_weights_{}_{}.'+self.figure_format)
-            filename2=os.path.join(dirname, 'fig_behavior_{}_{}.'+self.figure_format)
-            filename3=os.path.join(dirname, 'fig_rates_{}_{}.'+self.figure_format)
-            filename4=os.path.join(dirname, 'fig_monitored_{}_{}.'+self.figure_format)
-            filename5=os.path.join(dirname, 'fig_trials_{}_{}.'+self.figure_format)
-            filename6=os.path.join(dirname, 'fig_custom_{}_{}.'+self.figure_format)
-            self.fig3.savefig     (filename1.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
-            self.figOuts.savefig  (filename2.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
-            self.figRates.savefig (filename3.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+                os.makedirs(dirname)
+            filename1 = os.path.join(
+                dirname, 'fig_weights_{}_{}.'+self.figure_format)
+            filename2 = os.path.join(
+                dirname, 'fig_behavior_{}_{}.'+self.figure_format)
+            filename3 = os.path.join(
+                dirname, 'fig_rates_{}_{}.'+self.figure_format)
+            filename4 = os.path.join(
+                dirname, 'fig_monitored_{}_{}.'+self.figure_format)
+            filename5 = os.path.join(
+                dirname, 'fig_trials_{}_{}.'+self.figure_format)
+            filename6 = os.path.join(
+                dirname, 'fig_custom_{}_{}.'+self.figure_format)
+            self.fig3.savefig(filename1.format(parm_summary, time.strftime(
+                "%Y%m%d-%H%M%S")), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+            self.figOuts.savefig(filename2.format(parm_summary, time.strftime(
+                "%Y%m%d-%H%M%S")), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+            self.figRates.savefig(filename3.format(parm_summary, time.strftime(
+                "%Y%m%d-%H%M%S")), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
             self.fig_monitor = plt.figure()
             self.monitor.plot(self.fig_monitor, self)
-            self.figTrials.savefig(filename5.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+            self.figTrials.savefig(filename5.format(parm_summary, time.strftime(
+                "%Y%m%d-%H%M%S")), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
             if self.debug:
-                self.figCustom.savefig(filename6.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
-                self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+                self.figCustom.savefig(filename6.format(parm_summary, time.strftime(
+                    "%Y%m%d-%H%M%S")), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
+                self.fig_monitor.savefig(filename4.format(parm_summary, time.strftime(
+                    "%Y%m%d-%H%M%S")), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=self.figure_format)
 
             # output some variables of interest:
             # md ampflication and % correct responses from model.
-            filename7=os.path.join(dirname, 'values_of_interest.txt')
+            filename7 = os.path.join(dirname, 'values_of_interest.txt')
             filename7exits = os.path.exists(filename7)
             with open(filename7, 'a') as f:
                 if not filename7exits:
-                    [f.write(head+'\t') for head in ['MDamp', 'LR', 'HebbT', '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean']]
-                [f.write('{}\t '.format(val)) for val in  [*self.args.values()][:3]]
+                    [f.write(head+'\t') for head in ['MDamp', 'LR', 'HebbT',
+                                                     '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean']]
+                [f.write('{}\t '.format(val))
+                 for val in [*self.args.values()][:3]]
                 # {:.2e} \t {:.2f} \t'.format(self.args['MDamp'], self.args['MDlr'],self.args['MDbf'] ))
                 for score in self.score:
                     f.write('{:.2f}\t'.format(score))
                 f.write('\n')
-            
 
-            filename8=os.path.join(dirname, 'Corrects{}_{}')
-            np.save(filename8.format(parm_summary, time.strftime("%Y%m%d-%H%M%S")), self.corrects)
-            if 1==2: # output massive weight and rate files
+            filename8 = os.path.join(dirname, 'Corrects{}_{}')
+            np.save(filename8.format(parm_summary, time.strftime(
+                "%Y%m%d-%H%M%S")), self.corrects)
+            if 1 == 2:  # output massive weight and rate files
                 import pickle
-                filehandler = open(os.path.join(dirname, 'Rates{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                filehandler = open(os.path.join(dirname, 'Rates{}_{}'.format(
+                    parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
                 pickle.dump(rates, filehandler)
                 filehandler.close()
-                filehandler = open(os.path.join(dirname, 'Weights{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
+                filehandler = open(os.path.join(dirname, 'Weights{}_{}'.format(
+                    parm_summary, time.strftime("%Y%m%d-%H%M%S"))), 'wb')
                 pickle.dump(weights, filehandler)
                 filehandler.close()
 
             # np.save(os.path.join(dirname, 'Rates{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), rates)
             # np.save(os.path.join(dirname, 'Weights{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), weights)
 
-    def load(self,filename):
-        d = shelve.open(filename) # open
+    def load(self, filename):
+        d = shelve.open(filename)  # open
         if self.outExternal:
             self.wOut = d['wOut']
         else:
@@ -830,15 +917,20 @@ class PFCMD():
 
 
 if __name__ == "__main__":
-    parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "finals_switch_and_no_switch", nargs='?',  type=str, help="pass a str for experiment name")
-    group=parser.add_argument("x", default= 30., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 1, nargs='?', type=float, help="arg_2")
-    group=parser.add_argument("z", default= 1.0, nargs='?', type=float, help="arg_2")
-    args=parser.parse_args()
+    parser = argparse.ArgumentParser()
+    group = parser.add_argument("exp_name", default=RUN_ID,
+                                nargs='?',  type=str, help="pass a str for experiment name")
+    group = parser.add_argument(
+        "x", default=30., nargs='?',  type=float, help="arg_1")
+    group = parser.add_argument(
+        "y", default=1, nargs='?', type=float, help="arg_2")
+    group = parser.add_argument(
+        "z", default=1.0, nargs='?', type=float, help="arg_2")
+    args = parser.parse_args()
     # can now assign args.x and args.y to vars
-    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z, 'exp_name': args.exp_name, 'seed': int(args.y)}
-    #PFC_G = 1.6                    # if not positiveRates
+    args_dict = {'MDamp': args.x, 'MDlr': args.y, 'MDbf': args.z,
+                 'exp_name': args.exp_name, 'seed': int(args.y)}
+    # PFC_G = 1.6                    # if not positiveRates
     # PFC_G = args_dict['MDamp'] #6.
     PFC_G = 0.75  # used to be 6. and did nothing to the model. Now I pass its value to Gbase which does influence jrec
     PFC_G_off = 1.5
@@ -854,7 +946,7 @@ if __name__ == "__main__":
     pfcmd.MDamplification = args_dict['MDamp']
     pfcmd.MDlearningrate = 5e-5
     pfcmd.MDlearningBiasFactor = args_dict['MDbf']
-    
+
     if not reLoadWeights:
         t = time.perf_counter()
         pfcmd.train(learning_cycles_per_task)
@@ -894,7 +986,6 @@ if __name__ == "__main__":
 
     # pfcmd.train(learning_cycles_per_task)
 
-    
     if pfcmd.saveData:
         pfcmd.fileDict.close()
 
