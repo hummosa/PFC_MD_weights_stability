@@ -650,7 +650,7 @@ class PFCMD():
             self.no_of_trials_with_ofc_signal = 200 #int(args_dict['switches']) #lengths_of_directed_trials[blocki - self.Nblocks +6] #200-(40*(blocki-self.Nblocks + 6)) #decreasing no of instructed trials
             if (blocki > self.Nblocks - 8) and ((traini%self.trials_per_block) < self.no_of_trials_with_ofc_signal):
                 self.use_context_belief_to_switch_MD = bool(args_dict['switches'])
-                print(f'traini: {traini}')
+                # print(f'traini: {traini}')
                 # import pdb; pdb.set_trace()    
             else:
                 self.use_context_belief_to_switch_MD = False

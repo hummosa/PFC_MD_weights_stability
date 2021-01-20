@@ -164,8 +164,9 @@ class PFCMD():
             outAdd = np.dot(self.wOut,rout)
 
             # Gather MD inputs
-            if config.ofc_to_md_active: # TODO allow ofc to keep track of MD neurons specialization
-                MDinp += np.array([.6,-.6]) if association_level in ofc.match_association_levels else np.array([-.6,.6]) 
+            if config.ofc_to_md_active: # TODO make an ofc that keeps track of MD neurons specialization
+                # MDinp += np.array([.6,-.6]) if association_level in ofc.match_association_levels else np.array([-.6,.6]) 
+                MDinp += np.array([-.6,.6]) if association_level in ofc.match_association_levels else np.array([.6,-.6]) 
 
             if config.positiveRates:
                 MDinp +=  config.dt/config.tau * \
@@ -335,24 +336,24 @@ class PFCMD():
         Outrates = np.zeros( (Ntrain, config.tsteps, config.Nout  ) )
         Inputs   = np.zeros( (Ntrain, config.Ninputs))
         Targets  =  np.zeros( (Ntrain, config.Nout))
+        self.hx_of_ofc_signal_lengths = []
         MSEs = np.zeros(Ntrain)
 
         for traini in tqdm.tqdm(range(Ntrain)):
-
-
             if traini % config.trials_per_block == 0:
                 blocki = traini // config.trials_per_block    
-                association_level, ofc_signal = next(data_gen.block_generator(blocki)) # Get the context index for this current block
             if config.debug:
                 print('context i: ', association_level)
             
             cue, target = data_gen.trial_generator(association_level)
 
             # trigger OFC switch signal
-            config.no_of_trials_with_ofc_signal = int(args_dict['switches']) #lengths_of_directed_trials[blocki - config.Nblocks +6] #200-(40*(blocki-config.Nblocks + 6)) #decreasing no of instructed trials
+            config.no_of_trials_with_ofc_signal = 200 #int(args_dict['switches']) #lengths_of_directed_trials[blocki - config.Nblocks +6] #200-(40*(blocki-config.Nblocks + 6)) #decreasing no of instructed trials
             
             if ofc_signal is not 'off' and ((traini%config.trials_per_block) < config.no_of_trials_with_ofc_signal):
                 config.ofc_to_md_active = True 
+                if traini % config.trials_per_block == 0:
+                    self.hx_of_ofc_signal_lengths.append((blocki, config.no_of_trials_with_ofc_signal))
             else:
                 config.ofc_to_md_active = False
 
@@ -376,7 +377,7 @@ class PFCMD():
             if config.reinforceReservoir:
                 wJrecs[traini,:,:] = self.Jrec[:40, 0:25:1000].detach().cpu().numpy() # saving the whole rec is too large, 1000*1000*2200
 
-        if config.plotFigs:
+        if config.plotFigs: #Plotting and writing results. All needs cleaned up.
             weights= [wOuts, wPFC2MDs, wMD2PFCs,wMD2PFCMults,  wJrecs, MDpreTraces]
             rates =  [PFCrates, MDinputs, MDrates, Outrates, Inputs, Targets, MSEs]
             plot_weights(self, weights, config)
@@ -412,12 +413,12 @@ class PFCMD():
                 f.write('\n')
             
             if config.saveData: # output massive weight and rate files
-                np.save(fn('saved_Corrects'), self.corrects)
+                np.save(fn('saved_Corrects')[:-4]+'.npy', self.corrects)
                 import pickle
-                filehandler = open(fn('saved_rates')[5:-4], 'wb')
+                filehandler = open(fn('saved_rates')[:-4]+'.pickle', 'wb')
                 pickle.dump(rates, filehandler)
                 filehandler.close()
-                filehandler = open(fn('saved_weights')[5:-4], 'wb')
+                filehandler = open(fn('saved_weights')[:-4]+'.pickle', 'wb')
                 pickle.dump(weights, filehandler)
                 filehandler.close()
 
@@ -443,9 +444,9 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "finals_switch_and_no_switch", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("exp_name", default= "new_code", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 30., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 1, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("y", default= 7, nargs='?', type=float, help="arg_2")
     group=parser.add_argument("z", default= 1.0, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can  assign args.x and args.y to vars
@@ -473,7 +474,6 @@ if __name__ == "__main__":
     else:
         filename = 'dataPFCMD/data_reservoir_PFC_MD'+'_R'+str(pfcmd.RNGSEED)+ '.shelve'
         pfcmd.load(filename)
-        # all 4cues in a block
         pfcmd.train(data_generator)
        
     plt.show()

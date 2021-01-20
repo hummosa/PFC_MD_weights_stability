@@ -22,8 +22,8 @@ class data_generator():
     def block_generator(self,blocki):
         self.association_levels = np.array(['90', '70', '50', '30', '10'])
         if self.training_schedule is None:
-            self.block_schedule = ['90', '10','90', '10','90', '30', '70', '10', '50', '10']
-            self.ofc_control_schedule= ['off'] *5 + ['match', 'non-match'] *3
+            self.block_schedule = ['90', '10','90', '10','90', '10', '70', '10', '50', '10']
+            self.ofc_control_schedule= ['off'] *4 + ['match', 'non-match'] *3
             
         else:
             self.block_schedule=self.training_schedule

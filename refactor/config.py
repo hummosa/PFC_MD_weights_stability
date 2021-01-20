@@ -63,8 +63,7 @@ class Config():
         self.horizon = 40               # how many trials to look back when calculating Q values for actions available.
         self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
-        self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
-        self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
+        self.no_of_trials_with_ofc_signal = 50 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
 
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
