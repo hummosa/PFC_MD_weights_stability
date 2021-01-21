@@ -341,7 +341,8 @@ class PFCMD():
 
         for traini in tqdm.tqdm(range(Ntrain)):
             if traini % config.trials_per_block == 0:
-                blocki = traini // config.trials_per_block    
+                blocki = traini // config.trials_per_block  
+                association_level, ofc_signal = next(data_gen.block_generator(blocki)) # Get the context index for this current block  
             if config.debug:
                 print('context i: ', association_level)
             
