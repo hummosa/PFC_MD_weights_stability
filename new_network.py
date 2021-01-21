@@ -13,17 +13,15 @@ from scipy.io import savemat
 import sys,shelve, tqdm, time
 import plot_utils as pltu
 from refactor.data_generator import data_generator
-from plot_figures import *
+from refactor.plot_figures import *
 import argparse
 cuda = False
 if cuda: import torch
 import torch
 
 from refactor.ofc_mle import OFC, OFC_dumb
-ofc = OFC_dumb(horizon=40)
-ofc.set_context("0.7")
 
-from config import Config
+from refactor.config import Config
 
 data_generator = data_generator()
 
@@ -81,7 +79,7 @@ class PFCMD():
         self.initial_norm_wMD2PFC = np.linalg.norm(self.wMD2PFC) * .6
         #### Recurrent weights
         self.Jrec = np.random.normal(size=(config.Npfc, config.Npfc))\
-                        *config.G/np.sqrt(config.Nsub*2)
+                        *config.G/np.sqrt(config.Nsub)
         if cuda:
             self.Jrec = torch.Tensor(self.Jrec).cuda()
         #### Output weights
@@ -143,9 +141,7 @@ class PFCMD():
         outs = np.zeros(shape=(config.tsteps,config.Nout))
         out = np.zeros(config.Nout)
         errors = np.zeros(shape=(config.tsteps,config.Nout))
-        errors_other = np.zeros(shape=(config.tsteps,config.Nout))
         error_smooth = np.zeros(shape=config.Nout)
-        self.Q_values = [0., 0.]
 
         #init a Hebbian Trace for node perturbation to keep track of eligibilty trace.
         if config.reinforce:
@@ -159,14 +155,18 @@ class PFCMD():
             if config.MDreinforce:
                 HebbTraceMD = np.zeros(shape=(config.Nmd,config.Npfc))
 
+
+        ofc.Q_values = np.array(ofc.get_v() ) 
+
         for i in range(config.tsteps):
             rout = self.activation(xinp)
             routs[i,:] = rout
             outAdd = np.dot(self.wOut,rout)
 
             # Gather MD inputs
-            if config.ofc_to_md_active: # TODO allow ofc to keep track of MD neurons specialization
-                MDinp += np.array([.6,-.6]) if association_level in ofc.match_association_levels else np.array([-.6,.6]) 
+            if config.ofc_to_md_active: # TODO make an ofc that keeps track of MD neurons specialization
+                # MDinp += np.array([.6,-.6]) if association_level in ofc.match_association_levels else np.array([-.6,.6]) 
+                MDinp += np.array([-.6,.6]) if association_level in ofc.match_association_levels else np.array([.6,-.6]) 
 
             if config.positiveRates:
                 MDinp +=  config.dt/config.tau * \
@@ -183,11 +183,6 @@ class PFCMD():
             MDinps[i, :]= MDinp
 
             # Gather PFC inputs
-            if i < config.cuesteps:
-            #if MDeffect and useMult:
-            #    xadd += self.MD2PFCMult * np.dot(self.wIn,cue)
-                xadd += np.dot(self.wIn,cue)
-                xadd += np.dot(self.wV,self.Q_values)
 
             if MDeffect:
                  # Add multplicative amplification of recurrent inputs.
@@ -199,6 +194,12 @@ class PFCMD():
                     xadd = (1.+self.MD2PFCMult) * np.dot(self.Jrec,rout)
                 # Additive MD input to PFC
                 xadd += np.dot(self.wMD2PFC,MDout) 
+                
+            if i < config.cuesteps:
+            #if MDeffect and useMult:
+            #    xadd += self.MD2PFCMult * np.dot(self.wIn,cue)
+                xadd += np.dot(self.wIn,cue)
+                xadd += np.dot(self.wV,ofc.Q_values)
 
             # MD Hebbian learning
             if train and not config.MDreinforce:
@@ -273,11 +274,11 @@ class PFCMD():
                                     * np.outer(error_smooth,rout)
         #* At trial end:
         #################
-        cid = ofc.get_cid() # get inferred context id from ofc
-        trial_err, all_contexts_err = ofc.get_trial_err(errors)
+        cid = ofc.get_cid(association_level) # get inferred context id from ofc
+        trial_err, all_contexts_err = ofc.get_trial_err(errors, association_level)
         baseline_err = ofc.baseline_err
             
-        if train and config.reinforce:
+        if train: #and config.reinforce:
             # with learning using REINFORCE / node perturbation (Miconi 2017),
             #  the weights are only changed once, at the end of the trial
             # apart from eta * (err-baseline_err) * hebbianTrace,
@@ -306,17 +307,16 @@ class PFCMD():
                         (trial_err-baseline_err[cid]) * \
                             HebbTraceMD.T * 10. #* baseline_err[cid]  
                                           
-            baseline_err = ofc.update_baseline_err(association_level, all_contexts_err)
+            baseline_err = ofc.update_baseline_err( all_contexts_err)
 
             #synaptic scaling and competition both ways at MD-PFC synapses.
             self.wPFC2MD /= np.linalg.norm(self.wPFC2MD)/ self.initial_norm_wPFC2MD
             self.wMD2PFC /= np.linalg.norm(self.wMD2PFC)/ self.initial_norm_wMD2PFC
 
-        self.Q_values = np.array(ofc.get_v() ) 
 
-        ofc.update_v(cue[:2], out, target)
+        ofc.update_v(cue, out, target)
         
-        # self.monitor.log({'qvalue0':self.Q_values[0], 'qvalue1':self.Q_values[1]})
+        # self.monitor.log({'qvalue0':ofc.Q_values[0], 'qvalue1':ofc.Q_values[1]})
 
         return cues, routs, outs, MDouts, MDinps, errors
 
@@ -336,24 +336,25 @@ class PFCMD():
         Outrates = np.zeros( (Ntrain, config.tsteps, config.Nout  ) )
         Inputs   = np.zeros( (Ntrain, config.Ninputs))
         Targets  =  np.zeros( (Ntrain, config.Nout))
+        self.hx_of_ofc_signal_lengths = []
         MSEs = np.zeros(Ntrain)
 
         for traini in tqdm.tqdm(range(Ntrain)):
-
-
             if traini % config.trials_per_block == 0:
-                blocki = traini // config.trials_per_block    
-                association_level, ofc_signal = next(data_gen.block_generator(blocki)) # Get the context index for this current block
+                blocki = traini // config.trials_per_block  
+                association_level, ofc_signal = next(data_gen.block_generator(blocki)) # Get the context index for this current block  
             if config.debug:
                 print('context i: ', association_level)
             
             cue, target = data_gen.trial_generator(association_level)
 
             # trigger OFC switch signal
-            config.no_of_trials_with_ofc_signal = int(args_dict['switches']) #lengths_of_directed_trials[blocki - config.Nblocks +6] #200-(40*(blocki-config.Nblocks + 6)) #decreasing no of instructed trials
+            config.no_of_trials_with_ofc_signal = 200 #int(args_dict['switches']) #lengths_of_directed_trials[blocki - config.Nblocks +6] #200-(40*(blocki-config.Nblocks + 6)) #decreasing no of instructed trials
             
             if ofc_signal is not 'off' and ((traini%config.trials_per_block) < config.no_of_trials_with_ofc_signal):
                 config.ofc_to_md_active = True 
+                if traini % config.trials_per_block == 0:
+                    self.hx_of_ofc_signal_lengths.append((blocki, config.no_of_trials_with_ofc_signal))
             else:
                 config.ofc_to_md_active = False
 
@@ -366,7 +367,7 @@ class PFCMD():
             MDinputs[traini, :, :] = MDinps
             MDrates [traini, :, :] = MDouts
             Outrates[traini, :, :] = outs
-            Inputs  [traini, :]    = cue
+            Inputs  [traini, :]    = np.concatenate((cue,ofc.Q_values) )
             Targets [traini, :]    = target
             wOuts   [traini,:,:] = self.wOut
             wPFC2MDs[traini,:,:] = self.wPFC2MD
@@ -377,25 +378,25 @@ class PFCMD():
             if config.reinforceReservoir:
                 wJrecs[traini,:,:] = self.Jrec[:40, 0:25:1000].detach().cpu().numpy() # saving the whole rec is too large, 1000*1000*2200
 
-        if config.plotFigs:
+        if config.plotFigs: #Plotting and writing results. All needs cleaned up.
             weights= [wOuts, wPFC2MDs, wMD2PFCs,wMD2PFCMults,  wJrecs, MDpreTraces]
             rates =  [PFCrates, MDinputs, MDrates, Outrates, Inputs, Targets, MSEs]
-            plot_weights(self, weights)
-            plot_rates(self, rates)
-            plot_what_i_want(self, weights, rates)
+            plot_weights(self, weights, config)
+            plot_rates(self, rates, config)
+            plot_what_i_want(self, weights, rates, config)
             #from IPython import embed; embed()
             dirname="results/"+config.args_dict['exp_name']+"/"
             parm_summary= str(list(config.args_dict.values())[0])+"_"+str(list(config.args_dict.values())[1])+"_"+str(list(config.args_dict.values())[2])
             if not os.path.exists(dirname):
                     os.makedirs(dirname)
-            fn = lambda fn_str:os.path.join(dirname, 'fig_{}_{}_{}.'.format(fn_str,parm_summary, time.strftime("%Y%m%d-%H%M%S")) )
+            fn = lambda fn_str:os.path.join(dirname, 'fig_{}_{}_{}.{}'.format(fn_str,parm_summary, time.strftime("%Y%m%d-%H%M%S"), config.figure_format) )
             self.figWeights.savefig     (fn('weights'), dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=config.figure_format)
             self.figOuts.savefig  (fn('behavior'),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=config.figure_format)
             self.figRates.savefig (fn('rates'),   dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=config.figure_format)
+            self.figTrials.savefig(fn('trials'),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=config.figure_format)
             if config.debug:
                 self.fig_monitor = plt.figure()
                 self.monitor.plot(self.fig_monitor, self)
-                self.figTrials.savefig(fn('trials'),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=config.figure_format)
                 self.figCustom.savefig(fn('custom'),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=config.figure_format)
                 self.fig_monitor.savefig(fn('monitor'),dpi=pltu.fig_dpi, facecolor='w', edgecolor='w', format=config.figure_format)
 
@@ -413,12 +414,12 @@ class PFCMD():
                 f.write('\n')
             
             if config.saveData: # output massive weight and rate files
-                np.save(fn('saved_Corrects'), self.corrects)
+                np.save(fn('saved_Corrects')[:-4]+'.npy', self.corrects)
                 import pickle
-                filehandler = open(fn('saved_rates')[5:], 'wb')
+                filehandler = open(fn('saved_rates')[:-4]+'.pickle', 'wb')
                 pickle.dump(rates, filehandler)
                 filehandler.close()
-                filehandler = open(fn('saved_weights')[5:], 'wb')
+                filehandler = open(fn('saved_weights')[:-4]+'.pickle', 'wb')
                 pickle.dump(weights, filehandler)
                 filehandler.close()
 
@@ -444,15 +445,17 @@ class PFCMD():
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser()
-    group=parser.add_argument("exp_name", default= "finals_switch_and_no_switch", nargs='?',  type=str, help="pass a str for experiment name")
+    group=parser.add_argument("exp_name", default= "new_code", nargs='?',  type=str, help="pass a str for experiment name")
     group=parser.add_argument("x", default= 30., nargs='?',  type=float, help="arg_1")
-    group=parser.add_argument("y", default= 1, nargs='?', type=float, help="arg_2")
+    group=parser.add_argument("y", default= 7, nargs='?', type=float, help="arg_2")
     group=parser.add_argument("z", default= 1.0, nargs='?', type=float, help="arg_2")
     args=parser.parse_args()
     # can  assign args.x and args.y to vars
     args_dict = {'switches': args.x, 'MDlr': args.y, 'MDactive': args.z, 'exp_name': args.exp_name, 'seed': int(args.y)}
    
     config = Config(args_dict)
+    ofc = OFC_dumb(config)
+    ofc.set_context("0.7")
 
     # redefine some parameters for quick experimentation here.
     config.MDamplification = 30. #args_dict['switches']
@@ -472,7 +475,6 @@ if __name__ == "__main__":
     else:
         filename = 'dataPFCMD/data_reservoir_PFC_MD'+'_R'+str(pfcmd.RNGSEED)+ '.shelve'
         pfcmd.load(filename)
-        # all 4cues in a block
         pfcmd.train(data_generator)
        
     plt.show()

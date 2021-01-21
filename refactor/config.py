@@ -10,8 +10,8 @@ class Config():
         self.plotFigs = True
         self.debug = False
         self.saveData = False
-        self.figure_format =  'EPS'
-        # self.figure_format =  'PNG'
+        # self.figure_format =  'EPS'
+        self.figure_format =  'PNG'
         # self.figure_format =  'SVG'
         self.RNGSEED = args_dict['seed']                     
         np.random.seed([self.RNGSEED])
@@ -32,6 +32,7 @@ class Config():
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
                   
         #Network architecture
+        self.wV_structured = True
         self.Ninputs = 4                      # total number of inputs
         self.Ncues = 2                     # How many of the inputs are task cues (UP, DOWN)
         self.Nmd    = 2                       # number of MD cells.
@@ -62,14 +63,18 @@ class Config():
         self.horizon = 40               # how many trials to look back when calculating Q values for actions available.
         self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
+<<<<<<< HEAD
         self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
         self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
+=======
+        self.no_of_trials_with_ofc_signal = 50 #no of trials with OFC sparse switch control signal.
+>>>>>>> 5ac1c69e065289c69ea965285b53944afb0a3d13
         self.ofc_to_md_active = False
 
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017
-        self.MDreinforce = True            #  instead of error-driven learning
+        self.MDreinforce = False            #  instead of error-driven learning
                                             
         self.perturbProb = 50./self.tsteps
                                         # probability of perturbation of each output neuron per time step
