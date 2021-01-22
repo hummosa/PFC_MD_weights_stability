@@ -26,6 +26,7 @@ if cuda:
 
 ofc = OFC_Trial()
 
+DATA_DIR = "/om2/group/halassa/PFCMD-ali-sabrina"
 RUN_ID = "011921_file-per-trial"
 
 
@@ -774,7 +775,7 @@ class PFCMD():
                                                      0:25:1000].detach().cpu().numpy()
 
             # NOTE: Is there a better way to save this without calling `tolist()` on every matrix?
-            if False:
+            if True:
                 trial_weights = {
                     "w_outputs": wOuts[traini].tolist(),
                     "w_PFC2MD": wPFC2MDs[traini].tolist(),
@@ -795,7 +796,7 @@ class PFCMD():
                     "mse": MSEs[traini]
                 }
 
-                d = f"results/{self.args['exp_name']}"
+                d = f"{DATA_DIR}/{self.args['exp_name']}/by_trial"
                 if not os.path.exists(d):
                     os.makedirs(d)
                 with open(f'{d}/{traini}.json', 'w') as outfile:
@@ -821,7 +822,7 @@ class PFCMD():
             plot_rates(self, rates)
             plot_what_i_want(self, weights, rates)
             # from IPython import embed; embed()
-            dirname = "results/"+self.args['exp_name']+"/"
+            dirname = "{DATA_DIR}/"+self.args['exp_name']+"/"
             parm_summary = str(list(self.args.values())[
                 0])+"_"+str(list(self.args.values())[1])+"_"+str(list(self.args.values())[2])
             if not os.path.exists(dirname):
