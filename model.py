@@ -12,24 +12,21 @@ import matplotlib.pyplot as plt
 from scipy.io import savemat
 import sys,shelve, tqdm, time
 import plot_utils as pltu
-from refactor.data_generator import data_generator
-from refactor.plot_figures import *
 import argparse
 cuda = False
 if cuda: import torch
 import torch
 
+from refactor.data_generator import data_generator
+from refactor.plot_figures import *
 from refactor.ofc_mle import OFC, OFC_dumb
-
 from refactor.config import Config
 
 data_generator = data_generator()
 
 class PFCMD():
     def __init__(self,config,args_dict={}):
-        
         self.monitor = monitor(['context_belief', 'error_cxt1', 'error_cxt2', 'error_dif']) #monior class to track vars of interest
-
 
         #* Adjust network excitation levels based on MD effect, Positive Rates, and activation fxn
         if not config.MDeffect:
@@ -407,7 +404,7 @@ class PFCMD():
             with open(filename7, 'a') as f:
                 if not filename7exits:
                     [f.write(head+'\t') for head in ['switches', 'LR', 'HebbT', '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean']]
-                [f.write('{}\t '.format(val)) for val in  [*config.args_dict.values()][:3]]
+                [f.write('{}\t '.format(val)) for val in [*config.args_dict.values()][:3]]
                 # {:.2e} \t {:.2f} \t'.format(config.args_dict['switches'], config.args_dict['MDlr'],config.args_dict['MDactive'] ))
                 for score in self.score:
                     f.write('{:.2f}\t'.format(score)) 
