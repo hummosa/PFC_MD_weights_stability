@@ -17,17 +17,15 @@ cuda = False
 if cuda: import torch
 import torch
 
-from refactor.data_generator import data_generator
-from refactor.plot_figures import *
-from refactor.ofc_mle import OFC, OFC_dumb
-from refactor.config import Config
+from data_generator import data_generator
+from plot_figures import *
+from ofc_mle import OFC, OFC_dumb
+from config import Config
 
 data_generator = data_generator()
 
 class PFCMD():
     def __init__(self,config,args_dict={}):
-        self.monitor = monitor(['context_belief', 'error_cxt1', 'error_cxt2', 'error_dif']) #monior class to track vars of interest
-
         #* Adjust network excitation levels based on MD effect, Positive Rates, and activation fxn
         if not config.MDeffect:
             config.G *= config.MDremovalCompensationFactor
@@ -375,7 +373,7 @@ class PFCMD():
             if config.reinforceReservoir:
                 wJrecs[traini,:,:] = self.Jrec[:40, 0:25:1000].detach().cpu().numpy() # saving the whole rec is too large, 1000*1000*2200
 
-        if config.plotFigs: #Plotting and writing results. All needs cleaned up.
+        if config.plotFigs: #Plotting and writing results. Needs cleaned up.
             weights= [wOuts, wPFC2MDs, wMD2PFCs,wMD2PFCMults,  wJrecs, MDpreTraces]
             rates =  [PFCrates, MDinputs, MDrates, Outrates, Inputs, Targets, MSEs]
             plot_weights(self, weights, config)
