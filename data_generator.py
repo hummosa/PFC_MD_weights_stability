@@ -2,9 +2,17 @@ import numpy as np
 
 class data_generator():
     def __init__(self, training_schedule=None):
-        self.training_schedule = training_schedule
         self.association_levels = np.array(['90', '70', '50', '30', '10'])
         self.match_trial_probability={'90':0.9, '70':.7, '50':.5, '30':.3, '10':.1}
+        
+        if training_schedule is None:
+            self.block_schedule = ['90', '10', '90', '10', '90', '10', '90', '30', '90', '50', '90', '10']
+        else:
+            self.block_schedule= training_schedule
+        self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *2 + ['off'] *4
+        
+        self.strategy_schedule = ['match' if bs in ['90', '70', '50'] else 'non-match' for bs in self.block_schedule]
+        
 
     def trial_generator(self, association_level):
         '''
@@ -21,18 +29,12 @@ class data_generator():
         return (np.array([inp, 1-inp]), np.array([out, 1-out]))
 
     def block_generator(self,blocki):
-        if self.training_schedule is None:
-            self.block_schedule = ['90', '10', '90', '10', '90', '10', '70', '10', '50', '10']
-        else:
-            self.block_schedule=self.training_schedule
-        self.ofc_control_schedule= ['off'] *12 # + ['match', 'non-match'] *3
-        
-        self.strategy_schedule = ['match' if bs in ['90', '70', '50'] else 'non-match' for bs in self.block_schedule]
-        
         if blocki < len(self.block_schedule):
-            return (self.block_schedule[blocki], self.ofc_control_schedule[blocki])
+            # print(f'block {blocki}, association: {self.block_schedule[blocki]}')
+            yield (self.block_schedule[blocki], self.ofc_control_schedule[blocki])
         else:
-            return (np.random.choice(self.association_levels), 'off')
+            print(f'Generating random blocks: {blocki}')
+            yield (np.random.choice(self.association_levels), 'off')
             
 
 class data_generator_deprecated():
