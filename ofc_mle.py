@@ -109,5 +109,3 @@ class OFC_dumb:
                  self.config.decayErrorPerTrial * trial_err
 
         return self.baseline_err
-
-
