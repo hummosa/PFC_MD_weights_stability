@@ -38,7 +38,7 @@ class OFC:
         posterior = (likelihood * self.prior) / np.sum(likelihood * self.prior)
         self.prior = posterior
 
-class OFC_dumb:
+class OFC_error_computations:
     ASSOCIATION_RANGE = np.linspace(0, 1, 2)
 
     def __init__(self, config):
