@@ -9,8 +9,7 @@ class Config():
         self.reLoadWeights = False
         self.plotFigs = True
         self.debug = False
-        self.saveData = False
-        # self.figure_format =  'EPS'
+        self.saveData = True        # self.figure_format =  'EPS'
         self.figure_format =  'PNG'
         # self.figure_format =  'SVG'
         self.RNGSEED = args_dict['seed']                     
@@ -63,12 +62,7 @@ class Config():
         self.horizon = 40               # how many trials to look back when calculating Q values for actions available.
         self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
-<<<<<<< HEAD
-        self.no_of_trials_with_ofc_signal = 5 #no of trials with OFC sparse switch control signal.
-        self.hx_of_ofc_signal_lengths = [] # list of block i and no of trials with ofc signals for later plotting.
-=======
-        self.no_of_trials_with_ofc_signal = 50 #no of trials with OFC sparse switch control signal.
->>>>>>> 5ac1c69e065289c69ea965285b53944afb0a3d13
+        self.no_of_trials_with_ofc_signal = 0 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
 
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change

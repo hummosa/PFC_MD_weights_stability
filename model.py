@@ -344,7 +344,7 @@ class PFCMD():
             cue, target = data_gen.trial_generator(association_level)
 
             # trigger OFC switch signal
-            config.no_of_trials_with_ofc_signal = 200 #int(args_dict['switches']) #lengths_of_directed_trials[blocki - config.Nblocks +6] #200-(40*(blocki-config.Nblocks + 6)) #decreasing no of instructed trials
+            # config.no_of_trials_with_ofc_signal = #int(args_dict['switches']) #lengths_of_directed_trials[blocki - config.Nblocks +6] #200-(40*(blocki-config.Nblocks + 6)) #decreasing no of instructed trials
             
             if ofc_signal is not 'off' and ((traini%config.trials_per_block) < config.no_of_trials_with_ofc_signal):
                 config.ofc_to_md_active = True 
@@ -356,6 +356,7 @@ class PFCMD():
             _, routs, outs, MDouts, MDinps, errors = \
                 self.run_trial(association_level,ofc_signal,cue,target,MDeffect=config.MDeffect,
                 train=True)
+
 
             #Collect variables for analysis, plotting, and saving to disk    
             PFCrates[traini, :, :] = routs
@@ -372,6 +373,16 @@ class PFCMD():
             MSEs[traini] += np.mean(errors*errors)
             if config.reinforceReservoir:
                 wJrecs[traini,:,:] = self.Jrec[:40, 0:25:1000].detach().cpu().numpy() # saving the whole rec is too large, 1000*1000*2200
+
+        # collect input from OFC and add it to Inputs for outputting.
+        ofc_inputs = np.zeros((Ntrain,1))
+        tpb = config.trials_per_block
+        if len(self.hx_of_ofc_signal_lengths) > 0:
+            for bi in range(config.Nblocks):
+                ofc_hx = np.array(self.hx_of_ofc_signal_lengths)
+                if bi in ofc_hx[:,0]:
+                    ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = np.ones((config.no_of_trials_with_ofc_signal, 1))
+        Inputs = np.concatenate((Inputs, ofc_inputs), axis=-1)
 
         if config.plotFigs: #Plotting and writing results. Needs cleaned up.
             weights= [wOuts, wPFC2MDs, wMD2PFCs,wMD2PFCMults,  wJrecs, MDpreTraces]
