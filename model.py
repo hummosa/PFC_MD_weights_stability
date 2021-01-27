@@ -5,7 +5,9 @@
 
 import torch
 from config import Config
-from ofc_mle import OFC, OFC_dumb
+from ofc_mle import OFC_error_computations
+# from refactor.ofc_trailtype import OFC as OFC_Trial
+from ofc import OFC
 from plot_figures import *
 from data_generator import data_generator
 import os
@@ -289,10 +291,10 @@ class PFCMD():
         # * At trial end:
         #################
         # get inferred context id from ofc
-        cid = ofc.get_cid(association_level)
-        trial_err, all_contexts_err = ofc.get_trial_err(
+        cid = ofc_error_computations.get_cid(association_level)
+        trial_err, all_contexts_err = ofc_error_computations.get_trial_err(
             errors, association_level)
-        baseline_err = ofc.baseline_err
+        baseline_err = ofc_error_computations.baseline_err
 
         if train:  # and config.reinforce:
             # with learning using REINFORCE / node perturbation (Miconi 2017),
@@ -324,7 +326,7 @@ class PFCMD():
                     (trial_err-baseline_err[cid]) * \
                     HebbTraceMD.T * 10.  # * baseline_err[cid]
 
-            baseline_err = ofc.update_baseline_err(all_contexts_err)
+            baseline_err = ofc_error_computations.update_baseline_err(all_contexts_err)
 
             # synaptic scaling and competition both ways at MD-PFC synapses.
             self.wPFC2MD /= np.linalg.norm(self.wPFC2MD) / \
@@ -332,9 +334,10 @@ class PFCMD():
             self.wMD2PFC /= np.linalg.norm(self.wMD2PFC) / \
                 self.initial_norm_wMD2PFC
 
+        ofc_error_computations.update_v(cue, out, target)
         ofc.update_v(cue, out, target)
 
-        # self.monitor.log({'qvalue0':ofc.Q_values[0], 'qvalue1':ofc.Q_values[1]})
+        # self.monitor.log({'qvalue0':ofc_error_computations.Q_values[0], 'qvalue1':ofc_error_computations.Q_values[1]})
 
         return cues, routs, outs, MDouts, MDinps, errors
 
@@ -539,8 +542,12 @@ if __name__ == "__main__":
                  "save_data_by_trial": False}
 
     config = Config(args_dict)
-    ofc = OFC_dumb(config)
-    ofc.set_context("0.7")
+
+    ofc = OFC()
+    ofc_error_computations = OFC_error_computations(config)
+
+    # ofc = OFC_dumb(config)
+    # ofc.set_context("0.7")
 
     # redefine some parameters for quick experimentation here.
     config.MDamplification = 30.  # args_dict['switches']
