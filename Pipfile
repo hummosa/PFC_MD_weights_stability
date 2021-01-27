@@ -12,6 +12,7 @@ numpy = "*"
 matplotlib = "*"
 scipy = "*"
 tqdm = "*"
+torch = "*"
 
 [requires]
 python_version = "3.7"
