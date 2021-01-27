@@ -158,7 +158,7 @@ class PFCMD():
             if config.MDreinforce:
                 HebbTraceMD = np.zeros(shape=(config.Nmd, config.Npfc))
 
-        ofc.Q_values = np.array(ofc.get_v())
+        ofc.Q_values = np.flip(np.array(ofc.get_v()))
 
         for i in range(config.tsteps):
             rout = self.activation(xinp)
@@ -367,8 +367,7 @@ class PFCMD():
 
             cue, target = data_gen.trial_generator(association_level)
 
-            # trigger OFC switch signal
-        
+            # trigger OFC switch signal for a number of trials in the block
             if ofc_signal is not 'off' and ((traini % config.trials_per_block) < config.no_of_trials_with_ofc_signal):
                 config.ofc_to_md_active = True
                 if traini % config.trials_per_block == 0:
