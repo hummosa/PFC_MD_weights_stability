@@ -64,6 +64,7 @@ class Config():
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
         self.no_of_trials_with_ofc_signal = 0 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
+        self.ofc_effect = 0.2  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
 
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 

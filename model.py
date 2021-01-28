@@ -161,6 +161,7 @@ class PFCMD():
                 HebbTraceMD = np.zeros(shape=(config.Nmd, config.Npfc))
 
         ofc.Q_values = np.flip(np.array(ofc.get_v()))
+        ofc_error = np.flip(np.array(ofc.get_v()))
 
         for i in range(config.tsteps):
             rout = self.activation(xinp)
@@ -171,7 +172,7 @@ class PFCMD():
             if config.ofc_to_md_active:  # TODO make an ofc that keeps track of MD neurons specialization
                 # MDinp += np.array([.6,-.6]) if association_level in ofc.match_association_levels else np.array([-.6,.6])
                 MDinp += np.array(
-                    [-.6, .6]) if association_level in ofc.match_association_levels else np.array([.6, -.6])
+                    [-config.ofc_effect, config.ofc_effect]) if association_level in ofc_error_computations.match_association_levels else np.array([config.ofc_effect, -config.ofc_effect])
 
             if config.positiveRates:
                 MDinp += config.dt/config.tau * \
@@ -335,8 +336,10 @@ class PFCMD():
                 self.initial_norm_wMD2PFC
 
         ofc_error_computations.update_v(cue, out, target)
-        ofc.update_v(cue, out, target)
-
+        # ofc.update_v(cue, out, target)
+        ofc_signal = ofc.update_v(cue[:2], out, target)
+        if ofc_signal == "SWITCH":
+            ofc.switch_context()
         # self.monitor.log({'qvalue0':ofc_error_computations.Q_values[0], 'qvalue1':ofc_error_computations.Q_values[1]})
 
         return cues, routs, outs, MDouts, MDinps, errors
@@ -401,13 +404,19 @@ class PFCMD():
                 wJrecs[traini, :, :] = self.Jrec[:40,
                                                  0:25:1000].detach().cpu().numpy()
         # collect input from OFC and add it to Inputs for outputting.
+        # if ofc is off, the trial gets 0, if it is stimulating the 'match' side, it gets 1
+        # and 'non-match' gets -1. Although currently match and non-match have no meaning,
+        # as MD can be responding to either match or non-match. The disambiguation happens in post analysis
         ofc_inputs = np.zeros((Ntrain,1))
         tpb = config.trials_per_block
         if len(self.hx_of_ofc_signal_lengths) > 0:
             for bi in range(config.Nblocks):
                 ofc_hx = np.array(self.hx_of_ofc_signal_lengths)
                 if bi in ofc_hx[:,0]:
-                    ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = np.ones((config.no_of_trials_with_ofc_signal, 1))
+                    if data_generator.ofc_control_schedule[bi] is 'match':
+                        ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = np.ones((config.no_of_trials_with_ofc_signal, 1))
+                    else:
+                        ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = -np.ones((config.no_of_trials_with_ofc_signal, 1))
         Inputs = np.concatenate((Inputs, ofc_inputs), axis=-1)
 
         if config.plotFigs:  # Plotting and writing results. Needs cleaned up.
@@ -528,7 +537,7 @@ if __name__ == "__main__":
     group = parser.add_argument(
         "x", default=30., nargs='?',  type=float, help="arg_1")
     group = parser.add_argument(
-        "y", default=7, nargs='?', type=float, help="arg_2")
+        "y", default=8, nargs='?', type=float, help="arg_2")
     group = parser.add_argument(
         "z", default=1.0, nargs='?', type=float, help="arg_2")
     group = parser.add_argument("--outdir", default="./results",
@@ -549,6 +558,7 @@ if __name__ == "__main__":
     # ofc.set_context("0.7")
 
     # redefine some parameters for quick experimentation here.
+    config.no_of_trials_with_ofc_signal = int(args_dict['switches'])
     config.MDamplification = 30.  # args_dict['switches']
     config.MDlearningrate = 5e-5
     config.MDlearningBiasFactor = args_dict['MDactive']
