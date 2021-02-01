@@ -20,7 +20,7 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 12                   # number of blocks for the simulation
+        self.Nblocks = 5                   # number of blocks for the simulation
         self.trials_per_block = 400
         self.tau = 0.02
         self.dt = 0.001
@@ -45,6 +45,7 @@ class Config():
         self.training_schedule = lambda x: x%self.Ncontexts 
                                             # Creates a training_schedule. Specifies task context for each block 
                                             # Currently just loops through available contexts
+        self.train = True   # swich training on or off.
         self.tauError = 0.001            # smooth the error a bit, so that weights don't fluctuate
         self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
@@ -62,7 +63,7 @@ class Config():
         self.horizon = 40               # how many trials to look back when calculating Q values for actions available.
         self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
-        self.no_of_trials_with_ofc_signal = 0 #no of trials with OFC sparse switch control signal.
+        self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
         self.ofc_effect = 0.2  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
 

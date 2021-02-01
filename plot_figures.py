@@ -179,7 +179,7 @@ def plot_rates(pfcmd, rates, config):
             # print(bi*config.trials_per_block, directed_trials)
             strat_offset = strat_offsets[0]
             strat_offsets= strat_offsets[1:] # hack to alternative the bars, then fix in illustoratro if they are reversed. TODO detect which MD is which beforehand
-            ax.plot(range(bi*config.trials_per_block, bi*config.trials_per_block+ directed_trials), np.ones(directed_trials)*strat_offset, color='gray')
+            ax.plot(range(int(bi*config.trials_per_block), int(bi*config.trials_per_block)+ directed_trials), np.ones(directed_trials)*strat_offset, color='gray')
     try:
         rm = np.convolve(Corrects, np.ones((40,))/40, mode='valid')
         ax.plot(rm, color='black', linewidth= 0.5, alpha = 0.8)

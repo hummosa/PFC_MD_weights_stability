@@ -160,7 +160,7 @@ class PFCMD():
             if config.MDreinforce:
                 HebbTraceMD = np.zeros(shape=(config.Nmd, config.Npfc))
 
-        ofc.Q_values = np.flip(np.array(ofc.get_v()))
+        ofc.Q_values = np.array(ofc.get_v())
         ofc_error = np.flip(np.array(ofc.get_v()))
 
         for i in range(config.tsteps):
@@ -327,7 +327,6 @@ class PFCMD():
                     (trial_err-baseline_err[cid]) * \
                     HebbTraceMD.T * 10.  # * baseline_err[cid]
 
-            baseline_err = ofc_error_computations.update_baseline_err(all_contexts_err)
 
             # synaptic scaling and competition both ways at MD-PFC synapses.
             self.wPFC2MD /= np.linalg.norm(self.wPFC2MD) / \
@@ -335,6 +334,7 @@ class PFCMD():
             self.wMD2PFC /= np.linalg.norm(self.wMD2PFC) / \
                 self.initial_norm_wMD2PFC
 
+        baseline_err = ofc_error_computations.update_baseline_err(all_contexts_err)
         ofc_error_computations.update_v(cue, out, target)
         # ofc.update_v(cue, out, target)
         ofc_signal = ofc.update_v(cue[:2], out, target)
@@ -374,17 +374,29 @@ class PFCMD():
             cue, target = data_gen.trial_generator(association_level)
 
             # trigger OFC switch signal for a number of trials in the block
-            if ofc_signal is not 'off' and ((traini % config.trials_per_block) < config.no_of_trials_with_ofc_signal):
+            
+            ofc_signal_delay = 100
+            bi = traini % config.trials_per_block
+            if ofc_signal is not 'off' and ((bi > ofc_signal_delay) and (bi < config.no_of_trials_with_ofc_signal+ofc_signal_delay)):
                 config.ofc_to_md_active = True
-                if traini % config.trials_per_block == 0:
-                    self.hx_of_ofc_signal_lengths.append(
-                        (blocki, config.no_of_trials_with_ofc_signal))
             else:
                 config.ofc_to_md_active = False
+            
+            if traini % config.trials_per_block == 0:
+                self.hx_of_ofc_signal_lengths.append(
+                    (blocki+.25, config.no_of_trials_with_ofc_signal))
 
+            # if ofc_signal is not 'off' and ((traini % config.trials_per_block) < config.no_of_trials_with_ofc_signal):
+                # config.ofc_to_md_active = True
+                # if traini % config.trials_per_block == 0:
+                    # self.hx_of_ofc_signal_lengths.append(
+                        # (blocki+.25, config.no_of_trials_with_ofc_signal))
+            # else:
+                # config.ofc_to_md_active = False
+            
             _, routs, outs, MDouts, MDinps, errors = \
                 self.run_trial(association_level, ofc_signal, cue, target, MDeffect=config.MDeffect,
-                               train=True)
+                               train=config.train)
 
             # Collect variables for analysis, plotting, and saving to disk
             PFCrates[traini, :, :] = routs

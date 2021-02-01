@@ -9,7 +9,7 @@ class data_generator():
             self.block_schedule = ['90', '10', '90', '10', '90', '10', '90', '30', '90', '50', '90', '10']
         else:
             self.block_schedule= training_schedule
-        self.ofc_control_schedule= ['off'] *4  + ['match', 'non-match'] *2 + ['off'] *4
+        self.ofc_control_schedule= ['off'] *3  + ['match', 'non-match'] *2 + ['off'] *4
         
         self.strategy_schedule = ['match' if bs in ['90', '70', '50'] else 'non-match' for bs in self.block_schedule]
         
