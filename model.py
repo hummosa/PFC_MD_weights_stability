@@ -4,6 +4,7 @@
 """Extends code by Aditya Gilra. Some reservoir tweaks are inspired by Nicola and Clopath, arxiv, 2016 and Miconi 2016."""
 
 import torch
+import json
 from config import Config
 from ofc_mle import OFC_error_computations
 # from refactor.ofc_trailtype import OFC as OFC_Trial
@@ -415,27 +416,6 @@ class PFCMD():
                 # saving the whole rec is too large, 1000*1000*2200
                 wJrecs[traini, :, :] = self.Jrec[:40,
                                                  0:25:1000].detach().cpu().numpy()
-        # collect input from OFC and add it to Inputs for outputting.
-        # if ofc is off, the trial gets 0, if it is stimulating the 'match' side, it gets 1
-        # and 'non-match' gets -1. Although currently match and non-match have no meaning,
-        # as MD can be responding to either match or non-match. The disambiguation happens in post analysis
-        ofc_inputs = np.zeros((Ntrain,1))
-        tpb = config.trials_per_block
-        if len(self.hx_of_ofc_signal_lengths) > 0:
-            for bi in range(config.Nblocks):
-                ofc_hx = np.array(self.hx_of_ofc_signal_lengths)
-                if bi in ofc_hx[:,0]:
-                    if data_generator.ofc_control_schedule[bi] is 'match':
-                        ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = np.ones((config.no_of_trials_with_ofc_signal, 1))
-                    else:
-                        ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = -np.ones((config.no_of_trials_with_ofc_signal, 1))
-        Inputs = np.concatenate((Inputs, ofc_inputs), axis=-1)
-
-        if config.plotFigs:  # Plotting and writing results. Needs cleaned up.
-            weights = [wOuts, wPFC2MDs, wMD2PFCs,
-                       wMD2PFCMults,  wJrecs, MDpreTraces]
-            rates = [PFCrates, MDinputs, MDrates,
-                     Outrates, Inputs, Targets, MSEs]
 
             # Saves a data file per each trial
             # TODO possible variables to add for Mante & Sussillo condition analysis:
@@ -463,10 +443,32 @@ class PFCMD():
                 d = f"{config.args_dict['outdir']}/{config.args_dict['exp_name']}/by_trial"
                 if not os.path.exists(d):
                     os.makedirs(d)
-                with open(f'{d}/{traini}.json', 'w') as outfile:
+                with open(f"{d}/{traini}.json", 'w') as outfile:
                     json.dump({"trial_data": trial_data,
                                "network_weights": trial_weights,
                                "network_rates": trial_rates}, outfile)
+
+        # collect input from OFC and add it to Inputs for outputting.
+        # if ofc is off, the trial gets 0, if it is stimulating the 'match' side, it gets 1
+        # and 'non-match' gets -1. Although currently match and non-match have no meaning,
+        # as MD can be responding to either match or non-match. The disambiguation happens in post analysis
+        ofc_inputs = np.zeros((Ntrain,1))
+        tpb = config.trials_per_block
+        if len(self.hx_of_ofc_signal_lengths) > 0:
+            for bi in range(config.Nblocks):
+                ofc_hx = np.array(self.hx_of_ofc_signal_lengths)
+                if bi in ofc_hx[:,0]:
+                    if data_generator.ofc_control_schedule[bi] is 'match':
+                        ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = np.ones((config.no_of_trials_with_ofc_signal, 1))
+                    else:
+                        ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = -np.ones((config.no_of_trials_with_ofc_signal, 1))
+        Inputs = np.concatenate((Inputs, ofc_inputs), axis=-1)
+
+        if config.plotFigs:  # Plotting and writing results. Needs cleaned up.
+            weights = [wOuts, wPFC2MDs, wMD2PFCs,
+                       wMD2PFCMults,  wJrecs, MDpreTraces]
+            rates = [PFCrates, MDinputs, MDrates,
+                     Outrates, Inputs, Targets, MSEs]
 
             plot_weights(self, weights, config)
             plot_rates(self, rates, config)
@@ -559,15 +561,12 @@ if __name__ == "__main__":
     # OpenMind shared directory: "/om2/group/halassa/PFCMD-ali-sabrina"
     args_dict = {'switches': args.x, 'MDlr': args.y, 'MDactive': args.z,
                  'outdir':  args.outdir, 'exp_name': args.exp_name, 'seed': int(args.y),
-                 "save_data_by_trial": False}
+                 "save_data_by_trial": True}
 
     config = Config(args_dict)
 
     ofc = OFC()
     ofc_error_computations = OFC_error_computations(config)
-
-    # ofc = OFC_dumb(config)
-    # ofc.set_context("0.7")
 
     # redefine some parameters for quick experimentation here.
     config.no_of_trials_with_ofc_signal = int(args_dict['switches'])
