@@ -1,3 +1,6 @@
+# Sabrina's model. Uses a set of k means (k = ASSOCIATION_RANGE_N) to parametrize binomial distributions,
+#  and associates them with data points
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import binom

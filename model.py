@@ -6,9 +6,9 @@
 import torch
 import json
 from config import Config
-from ofc_mle import OFC_error_computations
+from error_computations import Error_computations
 # from refactor.ofc_trailtype import OFC as OFC_Trial
-from ofc import OFC
+from vmPFC_k_means import OFC
 from plot_figures import *
 from data_generator import data_generator
 import os
@@ -173,7 +173,7 @@ class PFCMD():
             if config.ofc_to_md_active:  # TODO make an ofc that keeps track of MD neurons specialization
                 # MDinp += np.array([.6,-.6]) if association_level in ofc.match_association_levels else np.array([-.6,.6])
                 MDinp += np.array(
-                    [-config.ofc_effect, config.ofc_effect]) if association_level in ofc_error_computations.match_association_levels else np.array([config.ofc_effect, -config.ofc_effect])
+                    [-config.ofc_effect, config.ofc_effect]) if association_level in error_computations.match_association_levels else np.array([config.ofc_effect, -config.ofc_effect])
 
             if config.positiveRates:
                 MDinp += config.dt/config.tau * \
@@ -293,10 +293,10 @@ class PFCMD():
         # * At trial end:
         #################
         # get inferred context id from ofc
-        cid = ofc_error_computations.get_cid(association_level)
-        trial_err, all_contexts_err = ofc_error_computations.get_trial_err(
+        cid = error_computations.get_cid(association_level)
+        trial_err, all_contexts_err = error_computations.get_trial_err(
             errors, association_level)
-        baseline_err = ofc_error_computations.baseline_err
+        baseline_err = error_computations.baseline_err
 
         if train:  # and config.reinforce:
             # with learning using REINFORCE / node perturbation (Miconi 2017),
@@ -335,13 +335,14 @@ class PFCMD():
             self.wMD2PFC /= np.linalg.norm(self.wMD2PFC) / \
                 self.initial_norm_wMD2PFC
 
-        baseline_err = ofc_error_computations.update_baseline_err(all_contexts_err)
-        ofc_error_computations.update_v(cue, out, target)
+        baseline_err = error_computations.update_baseline_err(all_contexts_err)
+        error_computations.update_v(cue, out, target)
         # ofc.update_v(cue, out, target)
         ofc_signal = ofc.update_v(cue[:2], out, target)
+        error_computations.Sabrina_Q_values = ofc.get_v() # TODO: this is just a temp fix to get estimates from Sabrina's vmPFC.
         if ofc_signal == "SWITCH":
             ofc.switch_context()
-        # self.monitor.log({'qvalue0':ofc_error_computations.Q_values[0], 'qvalue1':ofc_error_computations.Q_values[1]})
+        # self.monitor.log({'qvalue0':error_computations.Q_values[0], 'qvalue1':error_computations.Q_values[1]})
 
         return cues, routs, outs, MDouts, MDinps, errors
 
@@ -359,7 +360,7 @@ class PFCMD():
         MDinputs = np.zeros((Ntrain, config.tsteps, config.Nmd))
         MDrates = np.zeros((Ntrain, config.tsteps, config.Nmd))
         Outrates = np.zeros((Ntrain, config.tsteps, config.Nout))
-        Inputs = np.zeros((Ntrain, config.Ninputs))
+        Inputs = np.zeros((Ntrain, config.Ninputs+3)) # Adding OFC latents temp #TODO remove this.
         Targets = np.zeros((Ntrain, config.Nout))
         self.hx_of_ofc_signal_lengths = []
         MSEs = np.zeros(Ntrain)
@@ -404,7 +405,7 @@ class PFCMD():
             MDinputs[traini, :, :] = MDinps
             MDrates[traini, :, :] = MDouts
             Outrates[traini, :, :] = outs
-            Inputs[traini, :] = np.concatenate((cue, ofc.Q_values))
+            Inputs[traini, :] = np.concatenate([cue, ofc.Q_values, error_computations.p_sm_snm_ns])
             Targets[traini, :] = target
             wOuts[traini, :, :] = self.wOut
             wPFC2MDs[traini, :, :] = self.wPFC2MD
@@ -561,12 +562,12 @@ if __name__ == "__main__":
     # OpenMind shared directory: "/om2/group/halassa/PFCMD-ali-sabrina"
     args_dict = {'switches': args.x, 'MDlr': args.y, 'MDactive': args.z,
                  'outdir':  args.outdir, 'exp_name': args.exp_name, 'seed': int(args.y),
-                 "save_data_by_trial": True}
+                 "save_data_by_trial": False}
 
     config = Config(args_dict)
 
     ofc = OFC()
-    ofc_error_computations = OFC_error_computations(config)
+    error_computations = Error_computations(config)
 
     # redefine some parameters for quick experimentation here.
     config.no_of_trials_with_ofc_signal = int(args_dict['switches'])

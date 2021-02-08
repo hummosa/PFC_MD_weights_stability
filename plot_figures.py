@@ -200,7 +200,13 @@ def plot_rates(pfcmd, rates, config):
     # ax.plot(rm, color='black', linewidth= 0.5, alpha = 0.7)
     ax.plot(rm2, color='black', linewidth= 0.5, alpha = 0.8)
 
-    # ax = pfcmd.figOuts.add_subplot(313)
+    ax = pfcmd.figOuts.add_subplot(313)
+    ax.plot(Inputs[:,4], color='tab:red', alpha=0.7,   linewidth=1., label='sm')
+    ax.plot(range(1590, 1610), Inputs[1590:1610,5], 'o', markersize= 2, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    ax.plot(Inputs[:,5], color='tab:green', alpha=0.7, linewidth=1., label='ns')
+
+    ax.legend()
+
     # ax.plot(Matches,    'o', markersize = 3)
     # ax.plot(Responses,  'x', markersize = 3)
     # pltu.axes_labels(ax, 'Trials', 'non-match    Match')
@@ -208,9 +214,25 @@ def plot_rates(pfcmd, rates, config):
     # ax.set_xlim([1970, 2050])
 
     plt.text(0.01, -0.1, str(config.args_dict), transform=ax.transAxes)
+    
+    fig, axx = plt.subplots(3,1)
+    ax = axx[0]
+    t = 1190
+    d = 30
+    ax.plot(range(t, t+d), Inputs[t:t+d,5], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    ax = axx[1]
+    t = 1590
+    ax.plot(range(t, t+d), Inputs[t:t+d,5], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    
+    ax = axx[2]
+    t = 1590
+    d = 50
+    ax.plot(range(t, t+d), Inputs[t:t+d,5], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    
+    fig.savefig('./results/new_code/switch_signal.png')
+
     pfcmd.figRates
     pfcmd.figRates.tight_layout()
-
 
     # PLOT within trial activity for 4 selected trials:
     trials_to_draw = [0,config.trials_per_block, config.trials_per_block+100]# [0, config.trials_per_block, int(config.Nblocks//4*config.trials_per_block)]

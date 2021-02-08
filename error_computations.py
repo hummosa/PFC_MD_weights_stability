@@ -38,7 +38,7 @@ class OFC:
         posterior = (likelihood * self.prior) / np.sum(likelihood * self.prior)
         self.prior = posterior
 
-class OFC_error_computations:
+class Error_computations:
     ASSOCIATION_RANGE = np.linspace(0, 1, 2)
 
     def __init__(self, config):
@@ -47,7 +47,7 @@ class OFC_error_computations:
         self.ctx = None
         self.prior = np.array([0.5, 0.5])
         self.horizon = config.horizon
-        self.trial_history = [np.array([0.5,0.5])] *2
+        self.trial_history = ["MATCH"] *2 
 
         self.follow = 'behavioral_context' # 'association_levels'
         if self.follow == 'association_levels':
@@ -59,7 +59,8 @@ class OFC_error_computations:
                 
         self.baseline_err = np.zeros(shape=contexts)
         self.Q_values = [0., 0.]
-
+        self.Sabrina_Q_values = [0.5, 0.5]
+        self.p_sm_snm_ns = np.array ([1/3, 1/3, 1/3])
 
     def get_v(self):
         return (np.array(self.prior))
@@ -79,8 +80,69 @@ class OFC_error_computations:
         posterior = (likelihood * np.array([0.5, 0.5])) / np.sum(likelihood * np.array([0.5, 0.5]))
         # posterior = (likelihood * self.prior) / np.sum(likelihood * self.prior)
         # print(self.trial_history, posterior)
-        
+        T = len(self.trial_history)
         self.prior = posterior
+        
+        # TODO consider which model is used to estimte p(r|action), currently just using our MLE based estimator above.
+        # no but the above is the P(match_context)!! Not v1.... For that, I should use Sabrina's.
+        p_match, p_non_match = self.Sabrina_Q_values
+
+
+        p_sm, p_snm, p_ns = [], [], []
+        for t in range(T):
+            l_sm = np.math.pow(p_non_match, t) * np.math.pow(p_match, T-t)  #likelihood(switch_to_Match| horizon trials)     
+            l_snm= np.math.pow(p_match, t)     * np.math.pow(p_non_match, T-t) # likelihood(switch_to_Non-Match| trials) 
+            l_ns  = np.math.pow(p_non_match, T)                                 # likelihood(no_switch|trials)
+            # what about priors? p(switch_to_match)? that is affected by the last block change, and belief about current context.
+            # Or use priors as probabilities from previous trials. No_switch will be the biggest, but should keep it evolving over a short horizon. 
+            z = (l_sm + l_snm + l_ns)
+            p_sm.append(l_sm / z)
+            p_snm.append(l_snm / z)
+            p_ns.append(l_ns / z)
+            #p(r(0,t)| switch_at_t) p(switch_at_t)  / p(r(0,t))
+        
+        #Integrating from all horizon:
+        p_sm_T = np.sum(p_sm)
+        p_snm_T = np.sum(p_snm)
+        p_ns_T = np.sum(p_ns)
+
+        self.p_sm_snm_ns = np.array ([p_sm_T, p_snm_T, p_ns_T])
+
+        # ALTERNATIVELY:
+        # v1, v2 = self.Sabrina_Q_values
+        current_context = "MATCH"
+        horizon = [t == "MATCH" for t in self.trial_history]
+        choices = self.Sabrina_Q_values if current_context is "MATCH" else np.flip(self.Sabrina_Q_values)
+        choices_other = np.flip(choices)
+
+        stay_votes = np.choose(horizon, choices)
+        leave_votes = 1- stay_votes
+        ratio_switch_t = []
+        for t in range(T):
+            like_switch = np.prod(stay_votes[:t]) * np.prod(leave_votes[t:])
+            like_stay   = np.prod(stay_votes)
+            ratio_switch_t.append( like_switch/ (like_switch + like_stay) )
+
+        #Integrating from all horizon:
+        ratio_switch = np.array(ratio_switch_t).mean()
+        p_sm_T = ratio_switch 
+        p_snm_T = ratio_switch 
+        p_ns_T = 1-ratio_switch 
+        self.p_sm_snm_ns = np.array ([p_sm_T, p_snm_T, p_ns_T])
+
+        if ratio_switch > 1.2: #flip context
+            if current_context is "MATCH": current_context = "NON-MATCH"
+            else: current_context = "MATCH"
+
+
+        #OTHER ATTEMPT:
+        # p_r = # avg last ten rewards #probability of reward in current context using current action. simple average of recent rewards, but it might become unstable around change points. 
+
+        # p_switch, p_stay = [], []
+        # for t in range(T):
+        #     p_stay = np.math.pow(p_r, T)
+        #     p_switch = np.math.pow(p_r, t) * np.math.pow(p_r, T-t)
+
 
     def get_cid(self, association_level):
         if self.config.follow == 'association_levels':

@@ -9,7 +9,7 @@ class Config():
         self.reLoadWeights = False
         self.plotFigs = True
         self.debug = False
-        self.saveData = True        # self.figure_format =  'EPS'
+        self.saveData = False        # self.figure_format =  'EPS'
         self.figure_format =  'PNG'
         # self.figure_format =  'SVG'
         self.RNGSEED = args_dict['seed']                     
@@ -60,7 +60,7 @@ class Config():
 
         # OFC
         self.follow = 'behavioral_context' # 'association_levels'  # in estimating baseline_err whether to track each context (match, non-match) or more granularily track assocation levels 
-        self.horizon = 40               # how many trials to look back when calculating Q values for actions available.
+        self.horizon = 10               # how many trials to look back when calculating Q values for actions available.
         self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
         self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
