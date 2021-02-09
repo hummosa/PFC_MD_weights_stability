@@ -201,9 +201,9 @@ def plot_rates(pfcmd, rates, config):
     ax.plot(rm2, color='black', linewidth= 0.5, alpha = 0.8)
 
     ax = pfcmd.figOuts.add_subplot(313)
-    ax.plot(Inputs[:,4], color='tab:red', alpha=0.7,   linewidth=1., label='sm')
-    ax.plot(range(1590, 1610), Inputs[1590:1610,5], 'o', markersize= 2, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
-    ax.plot(Inputs[:,5], color='tab:green', alpha=0.7, linewidth=1., label='ns')
+    ax.plot(Inputs[:,4], color='tab:red', alpha=0.7,   linewidth=0.5, label='cx=match')
+    ax.plot(range(3190, 3220), Inputs[3190:3220,5], 'o', markersize= 2, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    ax.plot(Inputs[:,6], color='tab:green', alpha=0.7, linewidth=0.5, label='p(sw)')
 
     ax.legend()
 
@@ -219,15 +219,15 @@ def plot_rates(pfcmd, rates, config):
     ax = axx[0]
     t = 1190
     d = 30
-    ax.plot(range(t, t+d), Inputs[t:t+d,5], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     ax = axx[1]
-    t = 1590
-    ax.plot(range(t, t+d), Inputs[t:t+d,5], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    t = 3190
+    ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     
     ax = axx[2]
-    t = 1590
+    t = 3190
     d = 50
-    ax.plot(range(t, t+d), Inputs[t:t+d,5], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     
     fig.savefig('./results/new_code/switch_signal.png')
 

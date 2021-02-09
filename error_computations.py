@@ -61,6 +61,8 @@ class Error_computations:
         self.Q_values = [0., 0.]
         self.Sabrina_Q_values = [0.5, 0.5]
         self.p_sm_snm_ns = np.array ([1/3, 1/3, 1/3])
+        self.current_context = "MATCH"
+        
 
     def get_v(self):
         return (np.array(self.prior))
@@ -95,7 +97,7 @@ class Error_computations:
             l_ns  = np.math.pow(p_non_match, T)                                 # likelihood(no_switch|trials)
             # what about priors? p(switch_to_match)? that is affected by the last block change, and belief about current context.
             # Or use priors as probabilities from previous trials. No_switch will be the biggest, but should keep it evolving over a short horizon. 
-            z = (l_sm + l_snm + l_ns)
+            z = (l_sm + l_snm + l_ns) + 1e-6
             p_sm.append(l_sm / z)
             p_snm.append(l_snm / z)
             p_ns.append(l_ns / z)
@@ -110,10 +112,9 @@ class Error_computations:
 
         # ALTERNATIVELY:
         # v1, v2 = self.Sabrina_Q_values
-        current_context = "MATCH"
+
         horizon = [t == "MATCH" for t in self.trial_history]
-        choices = self.Sabrina_Q_values if current_context is "MATCH" else np.flip(self.Sabrina_Q_values)
-        choices_other = np.flip(choices)
+        choices = self.Sabrina_Q_values if self.current_context is "MATCH" else np.flip(self.Sabrina_Q_values)
 
         stay_votes = np.choose(horizon, choices)
         leave_votes = 1- stay_votes
@@ -125,14 +126,18 @@ class Error_computations:
 
         #Integrating from all horizon:
         ratio_switch = np.array(ratio_switch_t).mean()
-        p_sm_T = ratio_switch 
+        p_sm_T = 1. if self.current_context == "MATCH" else 0. 
         p_snm_T = ratio_switch 
         p_ns_T = 1-ratio_switch 
         self.p_sm_snm_ns = np.array ([p_sm_T, p_snm_T, p_ns_T])
 
-        if ratio_switch > 1.2: #flip context
-            if current_context is "MATCH": current_context = "NON-MATCH"
-            else: current_context = "MATCH"
+        if ratio_switch > 0.8: #flip context
+            if self.current_context is "MATCH": self.current_context = "NON-MATCH"
+            else: self.current_context = "MATCH"
+            #get trial with max switch prob:
+            max_t = np.argmax(ratio_switch_t)
+            # Purge all trial history entries before. Assume it is where the switch happened.
+            self.trial_history = self.trial_history[max_t:]
 
 
         #OTHER ATTEMPT:

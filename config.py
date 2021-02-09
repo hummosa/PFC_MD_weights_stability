@@ -20,7 +20,7 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 5                   # number of blocks for the simulation
+        self.Nblocks = 12                   # number of blocks for the simulation
         self.trials_per_block = 400
         self.tau = 0.02
         self.dt = 0.001

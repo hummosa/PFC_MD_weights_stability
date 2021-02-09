@@ -395,7 +395,8 @@ class PFCMD():
                         # (blocki+.25, config.no_of_trials_with_ofc_signal))
             # else:
                 # config.ofc_to_md_active = False
-            
+            if traini == 1600:
+                print('stop and debug')
             _, routs, outs, MDouts, MDinps, errors = \
                 self.run_trial(association_level, ofc_signal, cue, target, MDeffect=config.MDeffect,
                                train=config.train)
