@@ -29,8 +29,11 @@ class Config():
         self.response_delay = 0             # time between cue end and begin response, if 0 all trial is averaged for response
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
+        self.block_schedule = ['90', '10', '90', '10', '70', '30', '90', '30', '90', '50', '90', '10']
+        self.ofc_control_schedule= ['off'] *4  + ['match', 'non-match'] *1 + ['off'] *40
                   
         #Network architecture
+        self.neuralvmPFC = True
         self.wV_structured = True
         self.Ninputs = 4                      # total number of inputs
         self.Ncues = 2                     # How many of the inputs are task cues (UP, DOWN)

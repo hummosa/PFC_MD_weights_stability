@@ -58,11 +58,11 @@ class Error_computations:
             self.match_association_levels = {'90', '70', '50'}
                 
         self.baseline_err = np.zeros(shape=contexts)
-        self.Q_values = [0., 0.]
+        self.Q_values = [0.5, 0.5]
         self.Sabrina_Q_values = [0.5, 0.5]
         self.p_sm_snm_ns = np.array ([1/3, 1/3, 1/3])
         self.current_context = "MATCH"
-        
+        self.p_reward = 0.5
 
     def get_v(self):
         return (np.array(self.prior))
@@ -115,6 +115,8 @@ class Error_computations:
 
         horizon = [t == "MATCH" for t in self.trial_history]
         choices = self.Sabrina_Q_values if self.current_context is "MATCH" else np.flip(self.Sabrina_Q_values)
+        # self.p_reward = self.p_reward * 0.8 + 0.2 * np.max(self.Sabrina_Q_values)
+        # choices = np.array([self.p_reward, 1-self.p_reward])
 
         stay_votes = np.choose(horizon, choices)
         leave_votes = 1- stay_votes

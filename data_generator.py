@@ -1,15 +1,12 @@
 import numpy as np
 
 class data_generator():
-    def __init__(self, training_schedule=None):
+    def __init__(self, config):
         self.association_levels = np.array(['90', '70', '50', '30', '10'])
         self.match_trial_probability={'90':0.9, '70':.7, '50':.5, '30':.3, '10':.1}
         
-        if training_schedule is None:
-            self.block_schedule = ['90', '10', '90', '10', '70', '30', '90', '30', '90', '50', '90', '10']
-        else:
-            self.block_schedule= training_schedule
-        self.ofc_control_schedule= ['off'] *4  + ['match', 'non-match'] *1 + ['off'] *40
+        self.block_schedule= config.block_schedule
+        self.ofc_control_schedule= config.ofc_control_schedule
         
         self.strategy_schedule = ['match' if bs in ['90', '70', '50'] else 'non-match' for bs in self.block_schedule]
         

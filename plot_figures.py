@@ -161,7 +161,7 @@ def plot_rates(pfcmd, rates, config):
 
     # PLOT BEHAVIOR MEASURES
     pfcmd.figOuts = plt.figure()
-    pfcmd.figOuts.set_size_inches([9,5])
+    pfcmd.figOuts.set_size_inches([9,7])
 
     noise = 0.07
     ax = pfcmd.figOuts.add_subplot(211)
@@ -174,6 +174,7 @@ def plot_rates(pfcmd, rates, config):
     # plt.box(False)
     # print(f'length: {len(pfcmd.hx_of_ofc_signal_lengths)}')
     strat_offsets = [1.48, 0.1] * 50
+
     if len(pfcmd.hx_of_ofc_signal_lengths) > 1:
         for bi, directed_trials in pfcmd.hx_of_ofc_signal_lengths:
             # print(bi*config.trials_per_block, directed_trials)
@@ -186,23 +187,16 @@ def plot_rates(pfcmd, rates, config):
         ax.plot(Inputs[:,2], color='tab:red', alpha=0.7, linewidth=0.5)
     except:
         pass
-
+    
+    for bi in range(config.Nblocks):
+        plt.text((1/13)* (0.74+bi), 0.1, str(config.block_schedule[bi]), transform=ax.transAxes)
+    
+    
     ax = pfcmd.figOuts.add_subplot(212)
-    ax.plot(Matches + np.random.uniform(-noise, noise, size=(Ntrain,)  ),    '.', markersize = 0.5, alpha=0.7)
-    ax.plot(Responses+ np.random.uniform(-noise, noise, size=(Ntrain,) ),  '.', markersize = 0.5, alpha=0.7)
-    pltu.axes_labels(ax, 'Trials', 'non-match    Match')
-    # ax.set_title('Blue o: Correct    Orange x: response')
-    ax.set_ylim([-0.8, 1.8])
-    # ax.set_xlim([0, 2200])
-
-    # rm = np.convolve(Corrects, np.ones((40,))/40, mode='valid')
-    rm2 = running_mean(Corrects, 40)
-    # ax.plot(rm, color='black', linewidth= 0.5, alpha = 0.7)
-    ax.plot(rm2, color='black', linewidth= 0.5, alpha = 0.8)
-
-    ax = pfcmd.figOuts.add_subplot(313)
-    ax.plot(Inputs[:,4], color='tab:red', alpha=0.7,   linewidth=0.5, label='cx=match')
-    ax.plot(range(3190, 3220), Inputs[3190:3220,5], 'o', markersize= 2, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    ax.plot(Inputs[:,4]*.1, color='tab:red', alpha=0.7,   linewidth=0.5, label='cx=match')
+    st = tpb*4 - 10
+    d = 30
+    ax.plot(range(st, st+d), Inputs[st:st+d,6], 'o', markersize= 2, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     ax.plot(Inputs[:,6], color='tab:green', alpha=0.7, linewidth=0.5, label='p(sw)')
 
     ax.legend()
@@ -217,15 +211,15 @@ def plot_rates(pfcmd, rates, config):
     
     fig, axx = plt.subplots(3,1)
     ax = axx[0]
-    t = 1190
+    t = tpb*4 - 10
     d = 30
     ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     ax = axx[1]
-    t = 3190
+    t = tpb*4 - 10
     ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     
     ax = axx[2]
-    t = 3190
+    t = tpb*4 - 10
     d = 50
     ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     
@@ -468,3 +462,15 @@ class monitor():
             ax.set_title(label)
             pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
                         
+def plot_q_values(data):
+    vm_Outrates, vm_MDinputs = data
+    fig, axes = plt.subplots(3,1)
+    ax = axes[0]
+    ax.plot(vm_Outrates.mean(axis=1))
+    ax.set_title('vmPFC predictions')
+    ax.legend(['v1 estimate', 'v2 est'])
+    ax = axes[1]
+    ax.set_title('vmPFC related MD input averages')
+    ax.plot(vm_MDinputs.mean(axis=1))
+    ax.legend(['MD 0 inp', 'MD 1 inp'])
+    fig.savefig('./results/new_code/vmPFC.png')
