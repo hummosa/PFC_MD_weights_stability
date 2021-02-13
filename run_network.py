@@ -80,7 +80,11 @@ def train(areas, data_gen, config):
         q_values_after = ofc.get_v()
 
         if config.neuralvmPFC:
-            vmPFC_input = np.array([errors.mean(), q_values_before[0]])
+            out_trial_avg = outs.mean(axis=0)
+            outs_centered = out_trial_avg- out_trial_avg.mean() +0.5
+            matchness = np.dot(cue, outs_centered)
+
+            vmPFC_input = np.array([matchness, q_values_before[0]])
             # _, _, vm_outs, _, vm_MDinps,_ =\
         _, routs, vm_outs, MDouts, MDinps, _ =\
             vmPFC.run_trial(association_level, ofc_vmPFC, error_computations_vmPFC,
@@ -96,7 +100,7 @@ def train(areas, data_gen, config):
             vm_Outrates[traini, :, :] = vm_outs 
         MDrates[traini, :, :] = MDouts
         Outrates[traini, :, :] = outs
-        Inputs[traini, :] = np.concatenate([cue, ofc.Q_values, error_computations.p_sm_snm_ns])
+        Inputs[traini, :] = np.concatenate([cue, ofc_vmPFC.Q_values, error_computations_vmPFC.p_sm_snm_ns])
         Targets[traini, :] = target
         wOuts[traini, :, :] = area_to_plot.wOut
         wPFC2MDs[traini, :, :] = area_to_plot.wPFC2MD
