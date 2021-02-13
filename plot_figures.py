@@ -194,7 +194,7 @@ def plot_rates(pfcmd, rates, config):
     
     ax = pfcmd.figOuts.add_subplot(212)
     ax.plot(Inputs[:,4]*.1, color='tab:red', alpha=0.7,   linewidth=0.5, label='cx=match')
-    st = tpb*4 - 10
+    st = tpb*3 - 10
     d = 30
     ax.plot(range(st, st+d), Inputs[st:st+d,6], 'o', markersize= 2, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     ax.plot(Inputs[:,6], color='tab:green', alpha=0.7, linewidth=0.5, label='p(sw)')
@@ -211,19 +211,19 @@ def plot_rates(pfcmd, rates, config):
     
     fig, axx = plt.subplots(3,1)
     ax = axx[0]
-    t = tpb*4 - 10
+    t = tpb*2 - 10
     d = 30
     ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     ax = axx[1]
-    t = tpb*4 - 10
+    t = tpb*2 - 10
     ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     
     ax = axx[2]
-    t = tpb*4 - 10
+    t = tpb*2 - 10
     d = 50
     ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     
-    fig.savefig('./results/new_code/switch_signal.png')
+    fig.savefig('./results/switch_signal.png')
 
     pfcmd.figRates
     pfcmd.figRates.tight_layout()
@@ -473,4 +473,4 @@ def plot_q_values(data):
     ax.set_title('vmPFC related MD input averages')
     ax.plot(vm_MDinputs.mean(axis=1))
     ax.legend(['MD 0 inp', 'MD 1 inp'])
-    fig.savefig('./results/new_code/vmPFC.png')
+    fig.savefig('./results/vmPFC.png')

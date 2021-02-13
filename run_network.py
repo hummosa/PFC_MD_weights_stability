@@ -75,8 +75,13 @@ def train(areas, data_gen, config):
         q_values_before = ofc.get_v()
 
         _, routs, outs, MDouts, MDinps, errors = \
-            pfcmd.run_trial(association_level, ofc, error_computations, cue, target, config, MDeffect=config.MDeffect,
+            pfcmd.run_trial(association_level, q_values_before, error_computations, cue, target, config, MDeffect=config.MDeffect,
                             train=config.train)
+
+        ofc_signal = ofc.update_v(cue, outs[-1,:], target)
+        if ofc_signal == "SWITCH":
+            ofc.switch_context()
+        error_computations.Sabrina_Q_values = ofc.get_v() # TODO: this is just a temp fix to get estimates from Sabrina's vmPFC.
         q_values_after = ofc.get_v()
 
         if config.neuralvmPFC:
@@ -87,7 +92,7 @@ def train(areas, data_gen, config):
             vmPFC_input = np.array([matchness, q_values_before[0]])
             # _, _, vm_outs, _, vm_MDinps,_ =\
         _, routs, vm_outs, MDouts, MDinps, _ =\
-            vmPFC.run_trial(association_level, ofc_vmPFC, error_computations_vmPFC,
+            vmPFC.run_trial(association_level, q_values_before, error_computations_vmPFC,
                                 vmPFC_input, q_values_after, vm_config, MDeffect=config.MDeffect,
                                 train=config.train)
 
@@ -250,7 +255,7 @@ if __name__ == "__main__":
 
     config = Config(args_dict)
     vm_config = Config(args_dict)
-    vm_config.Ninputs = 6
+    # vm_config.Ninputs = 6
     data_generator = data_generator(config)
 
 
@@ -260,10 +265,9 @@ if __name__ == "__main__":
     error_computations_vmPFC = Error_computations(vm_config)
 
     # redefine some parameters for quick experimentation here.
-    config.no_of_trials_with_ofc_signal = int(args_dict['switches'])
-    config.MDamplification = 30.  # args_dict['switches']
-    config.MDlearningrate = 5e-5
-    config.MDlearningBiasFactor = args_dict['MDactive']
+    # config.no_of_trials_with_ofc_signal = int(args_dict['switches'])
+    # config.MDamplification = 30.  # args_dict['switches']
+    vm_config.MDlearningBiasFactor = args_dict['MDactive']
 
     pfcmd = PFCMD(config)
     if config.neuralvmPFC:

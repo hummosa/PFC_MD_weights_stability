@@ -6,13 +6,14 @@ class Config():
         # 'seed' # Seed for the np random number generator
         self.args_dict = args_dict
         #enviroment parameters:
-        self.reLoadWeights = False
         self.plotFigs = True
         self.debug = False
         self.saveData = False        # self.figure_format =  'EPS'
         self.figure_format =  'PNG'
         # self.figure_format =  'SVG'
-        self.RNGSEED = args_dict['seed']                     
+        self.outdir = args_dict['outdir'] if 'outdir' in args_dict else './results/'
+        self.RNGSEED = args_dict['seed'] if 'seed' in args_dict else 1                     
+        
         np.random.seed([self.RNGSEED])
         self.cuda = False
         # self.args = args_dict               # dict of args label:value
@@ -20,7 +21,7 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 12                   # number of blocks for the simulation
+        self.Nblocks = 5                   # number of blocks for the simulation
         self.trials_per_block = 400
         self.tau = 0.02
         self.dt = 0.001
@@ -43,6 +44,7 @@ class Config():
         self.Nsub = 200                     # number of neurons per cue
         self.Nout = 2                       # number of outputs
         self.G = 0.75                       # Controls level of excitation in the net
+        self.reLoadWeights = False
 
                           #  then the output interference depends on the order of cues within a cycle typical values is 1e-5, can vary from 1e-4 to 1e-6
         self.training_schedule = lambda x: x%self.Ncontexts 
@@ -53,7 +55,7 @@ class Config():
         self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
         self.MDremovalCompensationFactor = 2.# If MD effect is removed, excitation drops, multiply recurrent connection conductance by this factor to compensate
-        self.MDamplification = 25.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
+        self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 5e-5 #1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
         self.MDrange = 0.1                  # Allowable range for MD-PFC synapses.
         self.MDlearningBias = 0.3           # threshold for Hebbian learning. Biases pre*post activity.

@@ -129,7 +129,7 @@ class PFCMD():
         else:
             self.Jrec -= np.mean(self.Jrec, axis=1)[:, np.newaxis]
 
-    def run_trial(self, association_level, ofc, error_computations, cue, target, config, MDeffect=True,
+    def run_trial(self, association_level, Q_values, error_computations, cue, target, config, MDeffect=True,
                   MDCueOff=False, MDDelayOff=False,
                   train=True, routsTarget=None):
         '''
@@ -162,8 +162,7 @@ class PFCMD():
             if config.MDreinforce:
                 HebbTraceMD = np.zeros(shape=(config.Nmd, config.Npfc))
 
-        ofc.Q_values = np.array(ofc.get_v())
-        ofc_error = np.flip(np.array(ofc.get_v()))
+        ofc.Q_values = Q_values
 
         for i in range(config.tsteps):
             rout = self.activation(xinp)
@@ -211,7 +210,7 @@ class PFCMD():
                 # if MDeffect and useMult:
                 #    xadd += self.MD2PFCMult * np.dot(self.wIn,cue)
                 xadd += np.dot(self.wIn, cue)
-                xadd += np.dot(self.wV, ofc.Q_values)
+                xadd += np.dot(self.wV, Q_values)
 
             # MD Hebbian learning
             if train and not config.MDreinforce:
@@ -338,11 +337,6 @@ class PFCMD():
 
         baseline_err = error_computations.update_baseline_err(all_contexts_err)
         error_computations.update_v(cue, out, target)
-        # ofc.update_v(cue, out, target)
-        ofc_signal = ofc.update_v(cue[:2], out, target)
-        error_computations.Sabrina_Q_values = ofc.get_v() # TODO: this is just a temp fix to get estimates from Sabrina's vmPFC.
-        if ofc_signal == "SWITCH":
-            ofc.switch_context()
         # self.monitor.log({'qvalue0':error_computations.Q_values[0], 'qvalue1':error_computations.Q_values[1]})
 
         return cues, routs, outs, MDouts, MDinps, errors
