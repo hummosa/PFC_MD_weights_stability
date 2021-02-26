@@ -194,11 +194,17 @@ def plot_rates(pfcmd, rates, config):
     
     ax = pfcmd.figOuts.add_subplot(212)
     ax.plot(Inputs[:,4]*.1, color='tab:red', alpha=0.7,   linewidth=0.5, label='cx=match')
-    st = tpb*3 - 10
+    st = tpb*min(4, config.Nblocks-1) - 10
     d = 30
-    ax.plot(range(st, st+d), Inputs[st:st+d,6], 'o', markersize= 2, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
-    ax.plot(Inputs[:,6], color='tab:green', alpha=0.7, linewidth=0.5, label='p(sw)')
-
+    ax.plot(range(st, st+d), Inputs[st:st+d,5], 'o', markersize= 2, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sw_dots')
+    ax.plot(Inputs[:,5], color='tab:green', alpha=0.7, linewidth=0.5, label='p(sw)')
+    ax.plot(Inputs[:,6], color='tab:blue', alpha=0.5, linewidth=0.5, label='p(r)')
+    
+    for bi in range(config.Nblocks): # LABEL contexts
+        plt.text((1/13)* (0.74+bi), 0.1, str(config.block_schedule[bi]), transform=ax.transAxes)
+    for ib in range(1, config.Nblocks,2): # demarcate contexts with grey shading
+        ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
+    
     ax.legend()
 
     # ax.plot(Matches,    'o', markersize = 3)
@@ -209,21 +215,19 @@ def plot_rates(pfcmd, rates, config):
 
     plt.text(0.01, -0.1, str(config.args_dict), transform=ax.transAxes)
     
-    fig, axx = plt.subplots(3,1)
-    ax = axx[0]
-    t = tpb*2 - 10
-    d = 30
-    ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
-    ax = axx[1]
-    t = tpb*2 - 10
-    ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    # fig, axx = plt.subplots(3,1)
+    # ax = axx[0]
+    # t = tpb*min(3, config.Nblocks-1) - 10
+    # d = 30
+    # ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    # ax = axx[1]
+    # ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     
-    ax = axx[2]
-    t = tpb*2 - 10
-    d = 50
-    ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
+    # ax = axx[2]
+    # d = 50
+    # ax.plot(range(t, t+d), Inputs[t:t+d,6], 'o', markersize= 1, linewidth=0.5, color='tab:blue', alpha=0.7,   label='sm_dots')
     
-    fig.savefig('./results/switch_signal.png')
+    # fig.savefig('./results/switch_signal.png')
 
     pfcmd.figRates
     pfcmd.figRates.tight_layout()

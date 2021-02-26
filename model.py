@@ -162,8 +162,6 @@ class PFCMD():
             if config.MDreinforce:
                 HebbTraceMD = np.zeros(shape=(config.Nmd, config.Npfc))
 
-        ofc.Q_values = Q_values
-
         for i in range(config.tsteps):
             rout = self.activation(xinp)
             routs[i, :] = rout
@@ -336,7 +334,6 @@ class PFCMD():
                 self.initial_norm_wMD2PFC
 
         baseline_err = error_computations.update_baseline_err(all_contexts_err)
-        error_computations.update_v(cue, out, target)
         # self.monitor.log({'qvalue0':error_computations.Q_values[0], 'qvalue1':error_computations.Q_values[1]})
 
         return cues, routs, outs, MDouts, MDinps, errors

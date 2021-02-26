@@ -115,8 +115,11 @@ class Error_computations:
 
         horizon = [t == "MATCH" for t in self.trial_history]
         choices = self.Sabrina_Q_values if self.current_context is "MATCH" else np.flip(self.Sabrina_Q_values)
-        # self.p_reward = self.p_reward * 0.8 + 0.2 * np.max(self.Sabrina_Q_values)
-        # choices = np.array([self.p_reward, 1-self.p_reward])
+        
+        current_reward = target[np.argmax(choice.mean(axis=0))] # 1 if choice is correct, 0 otherwise
+        self.p_reward = 0.95 * self.p_reward + 0.05 * current_reward 
+        choices = np.array([self.p_reward, 1-self.p_reward])
+
 
         stay_votes = np.choose(horizon, choices)
         leave_votes = 1- stay_votes
@@ -130,12 +133,14 @@ class Error_computations:
         ratio_switch = np.array(ratio_switch_t).mean()
         p_sm_T = 1. if self.current_context == "MATCH" else 0. 
         p_snm_T = ratio_switch 
-        p_ns_T = 1-ratio_switch 
+        p_ns_T = self.p_reward 
         self.p_sm_snm_ns = np.array ([p_sm_T, p_snm_T, p_ns_T])
 
         if ratio_switch > 0.8: #flip context
             if self.current_context is "MATCH": self.current_context = "NON-MATCH"
             else: self.current_context = "MATCH"
+            #Note: reset reward
+            self.p_reward = 0.1
             #get trial with max switch prob:
             max_t = np.argmax(ratio_switch_t)
             # Purge all trial history entries before. Assume it is where the switch happened.

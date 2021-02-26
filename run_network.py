@@ -25,7 +25,6 @@ import argparse
 from model import PFCMD
 
 
-
 def train(areas, data_gen, config):
     pfcmd, vmPFC = areas
     Ntrain = config.trials_per_block * config.Nblocks
@@ -39,7 +38,7 @@ def train(areas, data_gen, config):
     wJrecs = np.zeros(shape=(Ntrain, 40, 40))
     PFCrates = np.zeros((Ntrain, config.tsteps, config.Npfc))
     MDinputs = np.zeros((Ntrain, config.tsteps, config.Nmd))
-    if config.neuralvmPFC:
+    if config.neural_vmPFC:
         vm_MDinputs = np.zeros((Ntrain, config.tsteps, config.Nmd))
         vm_Outrates = np.zeros((Ntrain, vm_config.tsteps, vm_config.Nout))
     MDrates = np.zeros((Ntrain, config.tsteps, config.Nmd))
@@ -49,10 +48,11 @@ def train(areas, data_gen, config):
     pfcmd.hx_of_ofc_signal_lengths = []
     MSEs = np.zeros(Ntrain)
 
+    q_values_before = np.array([0.5, 0.5])
     for traini in tqdm.tqdm(range(Ntrain)):
         if traini % config.trials_per_block == 0:
             blocki = traini // config.trials_per_block
-            association_level, ofc_signal = next(data_gen.block_generator(
+            association_level, ofc_control = next(data_gen.block_generator(
                 blocki))  # Get the context index for this current block
         if config.debug:
             print('context i: ', association_level)
@@ -63,49 +63,57 @@ def train(areas, data_gen, config):
         
         ofc_signal_delay = 100
         bi = traini % config.trials_per_block
-        if ofc_signal is not 'off' and ((bi > ofc_signal_delay) and (bi < config.no_of_trials_with_ofc_signal+ofc_signal_delay)):
+        if ofc_control is not 'off' and ((bi > ofc_signal_delay) and (bi < config.no_of_trials_with_ofc_signal+ofc_signal_delay)):
             config.ofc_to_md_active = True
             if traini % config.trials_per_block == 0:
                 pfcmd.hx_of_ofc_signal_lengths.append(
                     (blocki+.25, config.no_of_trials_with_ofc_signal))
         else:
             config.ofc_to_md_active = False
-        vmPFC.hx_of_ofc_signal_lengths = []
+        if config.neural_vmPFC: vmPFC.hx_of_ofc_signal_lengths = []
         
-        q_values_before = ofc.get_v()
+        # q_values_before = ofc.get_v()
+        error_computations.Sabrina_Q_values = ofc.get_v() # TODO: this is just a temp fix to get estimates from Sabrina's vmPFC.
 
         _, routs, outs, MDouts, MDinps, errors = \
             pfcmd.run_trial(association_level, q_values_before, error_computations, cue, target, config, MDeffect=config.MDeffect,
                             train=config.train)
 
+        error_computations.update_v(cue, outs, target)
         ofc_signal = ofc.update_v(cue, outs[-1,:], target)
         if ofc_signal == "SWITCH":
             ofc.switch_context()
-        error_computations.Sabrina_Q_values = ofc.get_v() # TODO: this is just a temp fix to get estimates from Sabrina's vmPFC.
         q_values_after = ofc.get_v()
 
-        if config.neuralvmPFC:
+        if config.neural_vmPFC:
             out_trial_avg = outs.mean(axis=0)
             outs_centered = out_trial_avg- out_trial_avg.mean() +0.5
             matchness = np.dot(cue, outs_centered)
 
             vmPFC_input = np.array([matchness, q_values_before[0]])
-            # _, _, vm_outs, _, vm_MDinps,_ =\
-        _, routs, vm_outs, MDouts, MDinps, _ =\
+            # _, routs, vm_outs, MDouts, MDinps, _ =\
+            _, _, vm_outs, _, vm_MDinps,_ =\
             vmPFC.run_trial(association_level, q_values_before, error_computations_vmPFC,
                                 vmPFC_input, q_values_after, vm_config, MDeffect=config.MDeffect,
                                 train=config.train)
 
+        # config.use_neural_q_values = True if bi > 6 else False  # take off training wheels for q_values learning
+        config.use_neural_q_values = False
+        if config.use_neural_q_values:
+            q_values_before = vm_outs.mean(axis=0)
+        else:
+            q_values_before = ofc.get_v()
+
         # Collect variables for analysis, plotting, and saving to disk
-        area_to_plot = vmPFC
+        area_to_plot = pfcmd
         PFCrates[traini, :, :] = routs
         MDinputs[traini, :, :] = MDinps
-        if config.neuralvmPFC:
-            vm_MDinputs[traini, :, :] = vm_MDinps if not area_to_plot is vmPFC else MDinps
+        if config.neural_vmPFC:
+            vm_MDinputs[traini, :, :] = vm_MDinps if area_to_plot is vmPFC else MDinps
             vm_Outrates[traini, :, :] = vm_outs 
         MDrates[traini, :, :] = MDouts
         Outrates[traini, :, :] = outs
-        Inputs[traini, :] = np.concatenate([cue, ofc_vmPFC.Q_values, error_computations_vmPFC.p_sm_snm_ns])
+        Inputs[traini, :] = np.concatenate([cue, q_values_after, error_computations.p_sm_snm_ns])
         Targets[traini, :] = target
         wOuts[traini, :, :] = area_to_plot.wOut
         wPFC2MDs[traini, :, :] = area_to_plot.wPFC2MD
@@ -170,7 +178,7 @@ def train(areas, data_gen, config):
                     wMD2PFCMults,  wJrecs, MDpreTraces]
         rates = [PFCrates, MDinputs, MDrates,
                     Outrates, Inputs, Targets, MSEs]
-        plot_q_values([vm_Outrates, vm_MDinputs])
+        # plot_q_values([vm_Outrates, vm_MDinputs])
         plot_weights(area_to_plot, weights, config)
         plot_rates(area_to_plot, rates, config)
         plot_what_i_want(area_to_plot, weights, rates, config)
@@ -267,27 +275,26 @@ if __name__ == "__main__":
     # redefine some parameters for quick experimentation here.
     # config.no_of_trials_with_ofc_signal = int(args_dict['switches'])
     # config.MDamplification = 30.  # args_dict['switches']
-    vm_config.MDlearningBiasFactor = args_dict['MDactive']
+    # config.MDlearningBiasFactor = args_dict['MDactive']
+    # config.G = 0.85
 
     pfcmd = PFCMD(config)
-    if config.neuralvmPFC:
+    if config.neural_vmPFC:
         vmPFC = PFCMD(vm_config)
     else:
         vmPFC = []
 
-    if not config.reLoadWeights:
-        t = time.perf_counter()
-        # pfcmd.train(data_generator)
-        train((pfcmd, vmPFC), data_generator, config)
-        print('training_time', (time.perf_counter() - t)/60, ' minutes')
-
-        # if config.saveData:
-        #     pfcmd.save()
-        #     pfcmd.fileDict.close()
-    else:
-        filename = 'dataPFCMD/data_reservoir_PFC_MD' + \
-            '_R'+str(pfcmd.RNGSEED) + '.shelve'
+        
+    if config.reLoadWeights:
+        filename = 'dataPFCMD/data_reservoir_PFC_MD' + '_R'+str(pfcmd.RNGSEED) + '.shelve'
         pfcmd.load(filename)
-        # pfcmd.train(data_generator)
-        train(pfcmd, data_generator, config)
+    t = time.perf_counter()
+
+    train((pfcmd, vmPFC), data_generator, config)
+    
+    print('training_time', (time.perf_counter() - t)/60, ' minutes')
+    
+    if config.saveData:
+        pfcmd.save()
+        pfcmd.fileDict.close()
 
