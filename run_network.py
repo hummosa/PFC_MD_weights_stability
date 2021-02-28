@@ -224,8 +224,8 @@ def train(areas, data_gen, config):
             f.write('{:.2f}\t'.format(PFCrates.mean()))
             f.write('\n')
 
+        np.save(fn('saved_Corrects')[:-4]+'.npy', area_to_plot.corrects)
         if config.saveData:  # output massive weight and rate files
-            np.save(fn('saved_Corrects')[:-4]+'.npy', area_to_plot.corrects)
             import pickle
             filehandler = open(fn('saved_rates')[:-4]+'.pickle', 'wb')
             pickle.dump(rates, filehandler)
