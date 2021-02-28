@@ -186,7 +186,7 @@ def train(areas, data_gen, config):
         dirname = config.args_dict['outdir'] + \
             "/"+config.args_dict['exp_name']+"/"
         parm_summary = str(list(config.args_dict.values())[0])+"_"+str(
-            list(config.args_dict.values())[1])+"_"+str(list(config.args_dict.values())[2])
+            list(config.args_dict.values())[1])+"_"+str(list(config.args_dict.values())[4])
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -215,12 +215,13 @@ def train(areas, data_gen, config):
         with open(filename7, 'a') as f:
             if not filename7exits:
                 [f.write(head+'\t') for head in ['switches', 'LR',
-                                                    'HebbT', '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean']]
+                                                    'HebbT', '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean', 'PFCavgFR']]
             [f.write('{}\t '.format(val))
-                for val in [*config.args_dict.values()][:3]]
+                for val in [*config.args_dict.values()][:2] + [list(config.args_dict.values())[4]] ]
             # {:.2e} \t {:.2f} \t'.format(config.args_dict['switches'], config.args_dict['MDlr'],config.args_dict['MDactive'] ))
             for score in area_to_plot.score:
                 f.write('{:.2f}\t'.format(score))
+            f.write('{:.2f}\t'.format(PFCrates.mean()))
             f.write('\n')
 
         if config.saveData:  # output massive weight and rate files
@@ -247,19 +248,22 @@ if __name__ == "__main__":
     group = parser.add_argument("exp_name", default="new_code",
                                 nargs='?',  type=str, help="pass a str for experiment name")
     group = parser.add_argument(
-        "x", default=30., nargs='?',  type=float, help="arg_1")
+        "seed", default=2, nargs='?',  type=float, help="simulation seed")
+    
     group = parser.add_argument(
-        "y", default=8, nargs='?', type=float, help="arg_2")
+        "--var1", default=1, nargs='?', type=float, help="arg_1")
     group = parser.add_argument(
-        "z", default=1.0, nargs='?', type=float, help="arg_2")
+        "--var2", default=1.0, nargs='?', type=float, help="arg_2")
+    group = parser.add_argument(
+        "--var3", default=1.0, nargs='?', type=float, help="arg_3")
     group = parser.add_argument("--outdir", default="./results",
                                 nargs='?',  type=str, help="pass a str for data directory")
     args = parser.parse_args()
     # can  assign args.x and args.y to vars
     # OpenMind shared directory: "/om2/group/halassa/PFCMD-ali-sabrina"
-    args_dict = {'switches': args.x, 'MDlr': args.y, 'MDactive': args.z,
-                 'outdir':  args.outdir, 'exp_name': args.exp_name, 'seed': int(args.y),
-                 "save_data_by_trial": False}
+    args_dict = {'MDeffect': args.var1 , 'Gcompensation': args.var2,
+                 'outdir':  args.outdir, 'exp_name': args.exp_name, 'seed': int(args.seed),
+                 "save_data_by_trial": False} # 'MDlr': args.y,'switches': args.x,  'MDactive': args.z,
 
     config = Config(args_dict)
     vm_config = Config(args_dict)
@@ -276,7 +280,9 @@ if __name__ == "__main__":
     # config.no_of_trials_with_ofc_signal = int(args_dict['switches'])
     # config.MDamplification = 30.  # args_dict['switches']
     # config.MDlearningBiasFactor = args_dict['MDactive']
-    # config.G = 0.85
+    config.MDremovalCompensationFactor = args_dict['Gcompensation']
+    config.MDeffect = bool(args_dict['MDeffect'])
+    
 
     pfcmd = PFCMD(config)
     if config.neural_vmPFC:

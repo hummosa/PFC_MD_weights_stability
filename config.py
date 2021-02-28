@@ -8,7 +8,7 @@ class Config():
         #enviroment parameters:
         self.plotFigs = True
         self.debug = False
-        self.saveData = True        # self.figure_format =  'EPS'
+        self.saveData = False        # self.figure_format =  'EPS'
         self.figure_format =  'PNG'
         # self.figure_format =  'SVG'
         self.outdir = args_dict['outdir'] if 'outdir' in args_dict else './results/'
@@ -21,8 +21,8 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 8                   # number of blocks for the simulation
-        self.trials_per_block = 600
+        self.Nblocks = 5                   # number of blocks for the simulation
+        self.trials_per_block = 500
         self.tau = 0.02
         self.dt = 0.001
         self.tsteps = 200                   # number of timesteps in a trial
@@ -44,7 +44,7 @@ class Config():
         self.Nofc = 500                      # number of ofc neurons
         self.Nsub = 200                     # number of neurons per cue
         self.Nout = 2                       # number of outputs
-        self.G = 0.75                       # Controls level of excitation in the net
+        self.G = 1                       # Controls level of excitation in the net
         self.reLoadWeights = False
 
                           #  then the output interference depends on the order of cues within a cycle typical values is 1e-5, can vary from 1e-4 to 1e-6

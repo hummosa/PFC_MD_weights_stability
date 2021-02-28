@@ -441,7 +441,7 @@ def plot_what_i_want(pfcmd, weights, rates, config):
         plt.text(0.01, 0.1, str(Inputs[ai])+ str(Targets[ai]), transform=ax.transAxes)
         ax.set_ylim([0, 15])        
         ax.set_xlim([0, .7])        
-    pfcmd.figCustom.tight_layout()
+    # pfcmd.figCustom.tight_layout()
 
 
 

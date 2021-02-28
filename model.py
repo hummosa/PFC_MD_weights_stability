@@ -36,8 +36,8 @@ if cuda:
 class PFCMD():
     def __init__(self, config, args_dict={}):
         # * Adjust network excitation levels based on MD effect, Positive Rates, and activation fxn
-        if not config.MDeffect:
-            config.G *= config.MDremovalCompensationFactor
+        # if not config.MDeffect:
+        config.G *= config.MDremovalCompensationFactor
 
         # I don't want to have an if inside activation  as it is called at each time step of the simulation
         # But just defining within __init__ doesn't make it a member method of the class,
@@ -190,7 +190,6 @@ class PFCMD():
             MDinps[i, :] = MDinp
 
             # Gather PFC inputs
-
             if MDeffect:
                 # Add multplicative amplification of recurrent inputs.
                 self.MD2PFCMult = np.dot(
@@ -203,6 +202,8 @@ class PFCMD():
                     xadd = (1.+self.MD2PFCMult) * np.dot(self.Jrec, rout)
                 # Additive MD input to PFC
                 xadd += np.dot(self.wMD2PFC, MDout)
+            else:
+                xadd = np.dot(self.Jrec, rout)
 
             if i < config.cuesteps:
                 # if MDeffect and useMult:
