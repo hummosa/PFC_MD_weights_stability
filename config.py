@@ -6,13 +6,14 @@ class Config():
         # 'seed' # Seed for the np random number generator
         self.args_dict = args_dict
         #enviroment parameters:
-        self.reLoadWeights = False
         self.plotFigs = True
         self.debug = False
-        self.saveData = True        # self.figure_format =  'EPS'
+        self.saveData = False        # self.figure_format =  'EPS'
         self.figure_format =  'PNG'
         # self.figure_format =  'SVG'
-        self.RNGSEED = args_dict['seed']                     
+        self.outdir = args_dict['outdir'] if 'outdir' in args_dict else './results/'
+        self.RNGSEED = args_dict['seed'] if 'seed' in args_dict else 1                     
+        
         np.random.seed([self.RNGSEED])
         self.cuda = False
         # self.args = args_dict               # dict of args label:value
@@ -21,7 +22,7 @@ class Config():
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
         self.Nblocks = 5                   # number of blocks for the simulation
-        self.trials_per_block = 400
+        self.trials_per_block = 500
         self.tau = 0.02
         self.dt = 0.001
         self.tsteps = 200                   # number of timesteps in a trial
@@ -29,8 +30,12 @@ class Config():
         self.response_delay = 0             # time between cue end and begin response, if 0 all trial is averaged for response
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
+        self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '30', '90', '10', '70', '10']
+        self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['off'] *40
                   
         #Network architecture
+        self.use_neural_q_values = False
+        self.neural_vmPFC = False
         self.wV_structured = True
         self.Ninputs = 4                      # total number of inputs
         self.Ncues = 2                     # How many of the inputs are task cues (UP, DOWN)
@@ -39,18 +44,16 @@ class Config():
         self.Nofc = 500                      # number of ofc neurons
         self.Nsub = 200                     # number of neurons per cue
         self.Nout = 2                       # number of outputs
-        self.G = 0.75                       # Controls level of excitation in the net
+        self.G = 1                       # Controls level of excitation in the net
+        self.reLoadWeights = False
 
                           #  then the output interference depends on the order of cues within a cycle typical values is 1e-5, can vary from 1e-4 to 1e-6
-        self.training_schedule = lambda x: x%self.Ncontexts 
-                                            # Creates a training_schedule. Specifies task context for each block 
-                                            # Currently just loops through available contexts
         self.train = True   # swich training on or off.
         self.tauError = 0.001            # smooth the error a bit, so that weights don't fluctuate
         self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
         self.MDremovalCompensationFactor = 2.# If MD effect is removed, excitation drops, multiply recurrent connection conductance by this factor to compensate
-        self.MDamplification = 25.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
+        self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 5e-5 #1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
         self.MDrange = 0.1                  # Allowable range for MD-PFC synapses.
         self.MDlearningBias = 0.3           # threshold for Hebbian learning. Biases pre*post activity.
@@ -60,7 +63,7 @@ class Config():
 
         # OFC
         self.follow = 'behavioral_context' # 'association_levels'  # in estimating baseline_err whether to track each context (match, non-match) or more granularily track assocation levels 
-        self.horizon = 40               # how many trials to look back when calculating Q values for actions available.
+        self.horizon = 10               # how many trials to look back when calculating Q values for actions available.
         self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
         self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
@@ -70,7 +73,9 @@ class Config():
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017
-        self.MDreinforce = False            #  instead of error-driven learning
+        if self.reinforce:                 # instead of error-driven learning
+            self.learning_rate *= 10       # increase learning rate for reinforce
+        self.MDreinforce = False            
                                             
         self.perturbProb = 50./self.tsteps
                                         # probability of perturbation of each output neuron per time step
@@ -78,7 +83,6 @@ class Config():
         self.meanErrors = np.zeros(self.Ncontexts)#*self.inpsPerContext) #Ali made errors per context rather than per context*cue
                                         # vector holding running mean error for each cue
         self.decayErrorPerTrial = 0.1   # how to decay the mean errorEnd by, per trial
-        self.learning_rate *= 10        # increase learning rate for reinforce
         self.reinforceReservoir = False # learning on reservoir weights also?
         if self.reinforceReservoir:
             self.perturbProb /= 10
