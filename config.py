@@ -6,10 +6,10 @@ class Config():
         # 'seed' # Seed for the np random number generator
         self.args_dict = args_dict
         #enviroment parameters:
-        self.plotFigs = True
+        self.plotFigs = False
         self.debug = False
-        self.saveData = False        # self.figure_format =  'EPS'
-        self.figure_format =  'PNG'
+        self.saveData = True        # self.figure_format =  'EPS'
+        self.figure_format =  'PDF'
         # self.figure_format =  'SVG'
         self.outdir = args_dict['outdir'] if 'outdir' in args_dict else './results/'
         self.RNGSEED = args_dict['seed'] if 'seed' in args_dict else 1                     
@@ -21,7 +21,7 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 5                   # number of blocks for the simulation
+        self.Nblocks = 12                   # number of blocks for the simulation
         self.trials_per_block = 500
         self.tau = 0.02
         self.dt = 0.001
@@ -30,7 +30,7 @@ class Config():
         self.response_delay = 0             # time between cue end and begin response, if 0 all trial is averaged for response
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
-        self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '30', '90', '10', '70', '10']
+        self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
         self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['off'] *40
                   
         #Network architecture

@@ -13,6 +13,16 @@ from plot_figures import *
 from data_generator import data_generator
 import os
 import numpy as np
+import matplotlib as mpl
+
+mpl.rcParams['axes.spines.left'] = True
+mpl.rcParams['axes.spines.right'] = False
+mpl.rcParams['axes.spines.top'] = False
+mpl.rcParams['axes.spines.bottom'] = True
+
+mpl.rcParams['pdf.fonttype'] = 42
+mpl.rcParams['ps.fonttype'] = 42
+
 import matplotlib.pyplot as plt
 # plt.ion()
 # from IPython import embed; embed()
@@ -173,34 +183,34 @@ def train(areas, data_gen, config):
                     ofc_inputs[bi*tpb:bi*tpb+config.no_of_trials_with_ofc_signal] = -np.ones((config.no_of_trials_with_ofc_signal, 1))
     Inputs = np.concatenate((Inputs, ofc_inputs), axis=-1)
 
-    if config.plotFigs:  # Plotting and writing results. Needs cleaned up.
-        weights = [wOuts, wPFC2MDs, wMD2PFCs,
-                    wMD2PFCMults,  wJrecs, MDpreTraces]
-        rates = [PFCrates, MDinputs, MDrates,
-                    Outrates, Inputs, Targets, MSEs]
-        # plot_q_values([vm_Outrates, vm_MDinputs])
-        plot_weights(area_to_plot, weights, config)
-        plot_rates(area_to_plot, rates, config)
-        plot_what_i_want(area_to_plot, weights, rates, config)
-        #from IPython import embed; embed()
-        dirname = config.args_dict['outdir'] + \
-            "/"+config.args_dict['exp_name']+"/"
-        parm_summary = str(list(config.args_dict.values())[0])+"_"+str(
-            list(config.args_dict.values())[1])+"_"+str(list(config.args_dict.values())[4])
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+    weights = [wOuts, wPFC2MDs, wMD2PFCs,
+                wMD2PFCMults,  wJrecs, MDpreTraces]
+    rates = [PFCrates, MDinputs, MDrates,
+                Outrates, Inputs, Targets, MSEs]
+    # plot_q_values([vm_Outrates, vm_MDinputs])
+    plot_weights(area_to_plot, weights, config)
+    plot_rates(area_to_plot, rates, config)
+    plot_what_i_want(area_to_plot, weights, rates, config)
+    #from IPython import embed; embed()
+    dirname = config.args_dict['outdir'] + \
+        "/"+config.args_dict['exp_name']+"/"
+    parm_summary = str(list(config.args_dict.values())[0])+"_"+str(
+        list(config.args_dict.values())[1])+"_"+str(list(config.args_dict.values())[4])
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    def fn(fn_str): return os.path.join(dirname, 'fig_{}_{}_{}.{}'.format(
+        fn_str, parm_summary, time.strftime("%Y%m%d-%H%M%S"), config.figure_format))
 
-        def fn(fn_str): return os.path.join(dirname, 'fig_{}_{}_{}.{}'.format(
-            fn_str, parm_summary, time.strftime("%Y%m%d-%H%M%S"), config.figure_format))
-        area_to_plot.figWeights.savefig(fn('weights'), dpi=pltu.fig_dpi,
+    if config.plotFigs:  # Plotting and writing results. Needs cleaned up.
+        area_to_plot.figWeights.savefig(fn('weights'),  transparent=True,dpi=pltu.fig_dpi,
                                 facecolor='w', edgecolor='w', format=config.figure_format)
-        area_to_plot.figOuts.savefig(fn('behavior'), dpi=pltu.fig_dpi,
+        area_to_plot.figOuts.savefig(fn('behavior'),  transparent=True,dpi=pltu.fig_dpi,
                                 facecolor='w', edgecolor='w', format=config.figure_format)
-        area_to_plot.figRates.savefig(fn('rates'),   dpi=pltu.fig_dpi,
-                                facecolor='w', edgecolor='w', format=config.figure_format)
-        area_to_plot.figTrials.savefig(fn('trials'), dpi=pltu.fig_dpi,
+        area_to_plot.figRates.savefig(fn('rates'),    transparent=True,dpi=pltu.fig_dpi,
                                 facecolor='w', edgecolor='w', format=config.figure_format)
         if config.debug:
+            area_to_plot.figTrials.savefig(fn('trials'),  transparent=True,dpi=pltu.fig_dpi,
+                                    facecolor='w', edgecolor='w', format=config.figure_format)
             area_to_plot.fig_monitor = plt.figure()
             area_to_plot.monitor.plot(area_to_plot.fig_monitor, area_to_plot)
             area_to_plot.figCustom.savefig(
@@ -210,32 +220,32 @@ def train(areas, data_gen, config):
 
         # output some variables of interest:
         # md ampflication and % correct responses from model.
-        filename7 = os.path.join(dirname, 'values_of_interest.txt')
-        filename7exits = os.path.exists(filename7)
-        with open(filename7, 'a') as f:
-            if not filename7exits:
-                [f.write(head+'\t') for head in ['switches', 'LR',
-                                                    'HebbT', '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean', 'PFCavgFR']]
-            [f.write('{}\t '.format(val))
-                for val in [*config.args_dict.values()][:2] + [list(config.args_dict.values())[4]] ]
-            # {:.2e} \t {:.2f} \t'.format(config.args_dict['switches'], config.args_dict['MDlr'],config.args_dict['MDactive'] ))
-            for score in area_to_plot.score:
-                f.write('{:.2f}\t'.format(score))
-            f.write('{:.2f}\t'.format(PFCrates.mean()))
-            f.write('\n')
+    filename7 = os.path.join(dirname, 'values_of_interest.txt')
+    filename7exits = os.path.exists(filename7)
+    with open(filename7, 'a') as f:
+        if not filename7exits:
+            [f.write(head+'\t') for head in ['switches', 'LR',
+                                                'HebbT', '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean', 'PFCavgFR\n']]
+        [f.write('{}\t '.format(val))
+            for val in [*config.args_dict.values()][:2] + [list(config.args_dict.values())[4]] ]
+        # {:.2e} \t {:.2f} \t'.format(config.args_dict['switches'], config.args_dict['MDlr'],config.args_dict['MDactive'] ))
+        for score in area_to_plot.score:
+            f.write('{:.2f}\t'.format(score))
+        f.write('{:.2f}\t'.format(PFCrates.mean()))
+        f.write('\n')
 
-        np.save(fn('saved_Corrects')[:-4]+'.npy', area_to_plot.corrects)
-        if config.saveData:  # output massive weight and rate files
-            import pickle
-            filehandler = open(fn('saved_rates')[:-4]+'.pickle', 'wb')
-            pickle.dump(rates, filehandler)
-            filehandler.close()
-            filehandler = open(fn('saved_weights')[:-4]+'.pickle', 'wb')
-            pickle.dump(weights, filehandler)
-            filehandler.close()
+    np.save(fn('saved_Corrects')[:-4]+'.npy', area_to_plot.corrects)
+    if config.saveData:  # output massive weight and rate files
+        import pickle
+        filehandler = open(fn('saved_rates')[:-4]+'.pickle', 'wb')
+        pickle.dump(rates, filehandler)
+        filehandler.close()
+        filehandler = open(fn('saved_weights')[:-4]+'.pickle', 'wb')
+        pickle.dump(weights, filehandler)
+        filehandler.close()
 
-            # np.save(os.path.join(dirname, 'Rates{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), rates)
-            # np.save(os.path.join(dirname, 'Weights{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), weights)
+        # np.save(os.path.join(dirname, 'Rates{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), rates)
+        # np.save(os.path.join(dirname, 'Weights{}_{}'.format(parm_summary, time.strftime("%Y%m%d-%H%M%S"))), weights)
 
 
 
