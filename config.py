@@ -8,7 +8,7 @@ class Config():
         #enviroment parameters:
         self.plotFigs = False
         self.debug = False
-        self.saveData = True        # self.figure_format =  'EPS'
+        self.saveData = False        # self.figure_format =  'EPS'
         self.figure_format =  'PDF'
         # self.figure_format =  'SVG'
         self.outdir = args_dict['outdir'] if 'outdir' in args_dict else './results/'
@@ -21,7 +21,7 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 12                   # number of blocks for the simulation
+        self.Nblocks = 8                   # number of blocks for the simulation
         self.trials_per_block = 500
         self.tau = 0.02
         self.dt = 0.001
@@ -31,8 +31,9 @@ class Config():
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
         self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
+        # self.block_schedule = ['90', '30', '70', '30', '70', '30', '70', '30', '70', '30', '70', '30']
         self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['off'] *40
-                  
+        
         #Network architecture
         self.use_neural_q_values = False
         self.neural_vmPFC = False
