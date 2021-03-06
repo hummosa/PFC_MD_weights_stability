@@ -261,7 +261,7 @@ if __name__ == "__main__":
     group = parser.add_argument(
         "--var2", default=1.0, nargs='?', type=float, help="arg_2")
     group = parser.add_argument(
-        "--var3", default=1.0, nargs='?', type=float, help="arg_3")
+        "--var3", default=0.0, nargs='?', type=float, help="arg_3")
     group = parser.add_argument("--outdir", default="./results",
                                 nargs='?',  type=str, help="pass a str for data directory")
     args = parser.parse_args()
