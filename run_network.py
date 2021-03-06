@@ -190,7 +190,7 @@ def train(areas, data_gen, config):
     dirname = config.args_dict['outdir'] + \
         "/"+config.args_dict['exp_name']+"/"
     parm_summary = str(list(config.args_dict.values())[0])+"_"+str(
-        list(config.args_dict.values())[1])+str(
+        list(config.args_dict.values())[1])+"_"+str(
         list(config.args_dict.values())[2])+"_"+str(list(config.args_dict.values())[5])
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -276,6 +276,9 @@ if __name__ == "__main__":
     # vm_config.Ninputs = 6
     data_generator = data_generator(config)
 
+    config.MDremovalCompensationFactor = args_dict['Gcompensation']
+    config.MDeffect = bool(args_dict['MDeffect'])
+    config.ofc_effect_magnitude = args_dict['OFC_effect']
 
     ofc = OFC()
     ofc_vmPFC = OFC()
@@ -286,9 +289,6 @@ if __name__ == "__main__":
     # config.no_of_trials_with_ofc_signal = int(args_dict['switches'])
     # config.MDamplification = 30.  # args_dict['switches']
     # config.MDlearningBiasFactor = args_dict['MDactive']
-    config.MDremovalCompensationFactor = args_dict['Gcompensation']
-    config.MDeffect = bool(args_dict['MDeffect'])
-    
 
     pfcmd = PFCMD(config)
     if config.neural_vmPFC:
