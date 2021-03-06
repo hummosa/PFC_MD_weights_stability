@@ -1,6 +1,6 @@
 #!/bin/bash
 rm slurm-*
-for s in {4..9} # seeds
+for s in {0..9} # seeds
 do
   for i in 0 1 # var1
   # for i in 1. 5. 10. 15. 20. 25. 30. 35. 40. 45. 50. 55. 60. #MD ampflication

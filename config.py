@@ -31,7 +31,7 @@ class Config():
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
         self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
-        self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['off'] *40
+        self.ofc_control_schedule= ['on'] *12  + ['match', 'non-match'] *1 + ['on'] *40
                   
         #Network architecture
         self.use_neural_q_values = False
@@ -69,7 +69,8 @@ class Config():
         self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
         self.ofc_effect = 0.0  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
-
+        self.ofc_effect_magnitude = 1.0
+        self.ofc_effect_momentum = 0.9
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017

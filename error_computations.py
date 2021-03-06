@@ -151,6 +151,7 @@ class Error_computations:
 
         #OTHER ATTEMPT:
         switch_thresh =0.85
+        switch= False
         trial_type = "MATCH" if (stimulus == target).all() else "NON-MATCH"
         self.trial_history.append(trial_type)
         if len(self.trial_history) > self.config.horizon: self.trial_history = self.trial_history[-self.horizon:]
@@ -192,7 +193,9 @@ class Error_computations:
                 self.current_context = "NON-MATCH"
             else: 
                 self.current_context = "MATCH"
-            self.config.ofc_effect = 2.0 # reset ofc effect to 1 and let it decay over the next few trials back to zero.
+            # self.config.ofc_effect = self.config.ofc_effect_magnitude # reset ofc effect to 1 and let it decay over the next few trials back to zero.
+            switch=True
+
             #Note: reset reward
     #         self.p_reward = 0.1
             #get trial with max switch prob:
@@ -210,6 +213,7 @@ class Error_computations:
         self.wOFC2MD = self.wOFC2MD/np.linalg.norm(self.wOFC2MD)
         # print(self.wOFC2MD) [[ 0.5 -0.5]  Works great.
                             #  [-0.5  0.5]]
+        return switch
 
     def get_cid(self, association_level):
         if self.config.follow == 'association_levels':
