@@ -6,11 +6,11 @@ class Config():
         # 'seed' # Seed for the np random number generator
         self.args_dict = args_dict
         #enviroment parameters:
-        self.plotFigs = False
+        self.plotFigs = True
         self.debug = False
-        self.saveData = True        # self.figure_format =  'EPS'
-        self.figure_format =  'PDF'
-        # self.figure_format =  'SVG'
+        self.saveData = False        # self.figure_format =  'EPS'
+        # self.figure_format =  'PDF'
+        self.figure_format =  'PNG'
         self.outdir = args_dict['outdir'] if 'outdir' in args_dict else './results/'
         self.RNGSEED = args_dict['seed'] if 'seed' in args_dict else 1                     
         
@@ -21,7 +21,7 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 12                   # number of blocks for the simulation
+        self.Nblocks = 5                   # number of blocks for the simulation
         self.trials_per_block = 500
         self.tau = 0.02
         self.dt = 0.001
@@ -68,7 +68,7 @@ class Config():
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
         self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
-        self.ofc_effect = 0.2  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
+        self.ofc_effect = 0.0  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
 
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 

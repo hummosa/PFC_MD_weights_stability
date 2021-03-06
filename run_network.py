@@ -71,6 +71,7 @@ def train(areas, data_gen, config):
 
         # trigger OFC switch signal for a number of trials in the block
         
+        config.ofc_effect = 0.9 * config.ofc_effect
         ofc_signal_delay = 100
         bi = traini % config.trials_per_block
         if ofc_control is not 'off' and ((bi > ofc_signal_delay) and (bi < config.no_of_trials_with_ofc_signal+ofc_signal_delay)):
@@ -81,6 +82,7 @@ def train(areas, data_gen, config):
         else:
             config.ofc_to_md_active = False
         if config.neural_vmPFC: vmPFC.hx_of_ofc_signal_lengths = []
+        config.ofc_to_md_active = True
         
         # q_values_before = ofc.get_v()
         error_computations.Sabrina_Q_values = ofc.get_v() # TODO: this is just a temp fix to get estimates from Sabrina's vmPFC.
@@ -89,7 +91,7 @@ def train(areas, data_gen, config):
             pfcmd.run_trial(association_level, q_values_before, error_computations, cue, target, config, MDeffect=config.MDeffect,
                             train=config.train)
 
-        error_computations.update_v(cue, outs, target)
+        error_computations.update_v(cue, outs, target, MDouts)
         ofc_signal = ofc.update_v(cue, outs[-1,:], target)
         if ofc_signal == "SWITCH":
             ofc.switch_context()
