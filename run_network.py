@@ -190,7 +190,8 @@ def train(areas, data_gen, config):
     dirname = config.args_dict['outdir'] + \
         "/"+config.args_dict['exp_name']+"/"
     parm_summary = str(list(config.args_dict.values())[0])+"_"+str(
-        list(config.args_dict.values())[1])+"_"+str(list(config.args_dict.values())[4])
+        list(config.args_dict.values())[1])+str(
+        list(config.args_dict.values())[2])+"_"+str(list(config.args_dict.values())[5])
     if not os.path.exists(dirname):
         os.makedirs(dirname)
     def fn(fn_str): return os.path.join(dirname, 'fig_{}_{}_{}.{}'.format(
@@ -219,10 +220,10 @@ def train(areas, data_gen, config):
     filename7exits = os.path.exists(filename7)
     with open(filename7, 'a') as f:
         if not filename7exits:
-            [f.write(head+'\t') for head in ['switches', 'LR',
+            [f.write(head+'\t') for head in ['switches', 'LR', 'ofc',
                                                 'HebbT', '1st', '2nd', '3rd', '4th', 'avg1-3', 'mean', 'PFCavgFR\n']]
         [f.write('{}\t '.format(val))
-            for val in [*config.args_dict.values()][:2] + [list(config.args_dict.values())[4]] ]
+            for val in [*config.args_dict.values()][:3] + [list(config.args_dict.values())[5]] ]
         # {:.2e} \t {:.2f} \t'.format(config.args_dict['switches'], config.args_dict['MDlr'],config.args_dict['MDactive'] ))
         for score in area_to_plot.score:
             f.write('{:.2f}\t'.format(score))
@@ -266,7 +267,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # can  assign args.x and args.y to vars
     # OpenMind shared directory: "/om2/group/halassa/PFCMD-ali-sabrina"
-    args_dict = {'MDeffect': args.var1 , 'Gcompensation': args.var2,
+    args_dict = {'MDeffect': args.var1 , 'Gcompensation': args.var2, 'OFC_effect': args.var3,
                  'outdir':  args.outdir, 'exp_name': args.exp_name, 'seed': int(args.seed),
                  "save_data_by_trial": False} # 'MDlr': args.y,'switches': args.x,  'MDactive': args.z,
 
