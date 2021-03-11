@@ -6,7 +6,7 @@ class Config():
         # 'seed' # Seed for the np random number generator
         self.args_dict = args_dict
         #enviroment parameters:
-        self.plotFigs = True
+        self.plotFigs = False
         self.debug = False
         self.saveData = False        # self.figure_format =  'EPS'
         # self.figure_format =  'PDF'
