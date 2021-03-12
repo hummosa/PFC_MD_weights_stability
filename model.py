@@ -189,10 +189,6 @@ class PFCMD():
             MDinps[i, :] = MDinp
 
             # Gather PFC inputs
-            if config.ofc_to_PFC_active:                     
-                input_from_ofc = np.dot(error_computations.wOFC2dlPFC , error_computations.vec_current_context )
-                xadd += config.ofc_effect * input_from_ofc
-
 
             if MDeffect:
                 # Add multplicative amplification of recurrent inputs.
@@ -208,6 +204,10 @@ class PFCMD():
                 xadd += np.dot(self.wMD2PFC, MDout)
             else:
                 xadd = np.dot(self.Jrec, rout)
+
+            if config.ofc_to_PFC_active:                     
+                input_from_ofc = np.dot(error_computations.wOFC2dlPFC , error_computations.vec_current_context )
+                xadd += config.ofc_effect * input_from_ofc
 
             if i < config.cuesteps:
                 # if MDeffect and useMult:
