@@ -70,9 +70,6 @@ def train(areas, data_gen, config):
         cue, target = data_gen.trial_generator(association_level)
 
         # trigger OFC switch signal for a number of trials in the block
-        
-        config.ofc_to_md_active = (ofc_control is 'on')
-        
         # q_values_before = ofc.get_v()
         error_computations.Sabrina_Q_values = ofc.get_v() # TODO: this is just a temp fix to get estimates from Sabrina's vmPFC.
 
@@ -80,9 +77,9 @@ def train(areas, data_gen, config):
             pfcmd.run_trial(association_level, q_values_before, error_computations, cue, target, config, MDeffect=config.MDeffect,
                             train=config.train)
 
-        switch = error_computations.update_v(cue, outs, target, MDouts)
+        switch = error_computations.update_v(cue, outs, target, MDouts.mean(axis=0), routs.mean(axis=0))
         config.ofc_effect = config.ofc_effect_momentum * config.ofc_effect
-        if switch: 
+        if switch and (ofc_control is 'on'): 
             config.ofc_effect = config.ofc_effect_magnitude
 
         ofc_signal = ofc.update_v(cue, outs[-1,:], target)
@@ -261,7 +258,7 @@ if __name__ == "__main__":
     group = parser.add_argument(
         "--var2", default=1.0, nargs='?', type=float, help="arg_2")
     group = parser.add_argument(
-        "--var3", default=0.0, nargs='?', type=float, help="arg_3")
+        "--var3", default=1.0, nargs='?', type=float, help="arg_3")
     group = parser.add_argument("--outdir", default="./results",
                                 nargs='?',  type=str, help="pass a str for data directory")
     args = parser.parse_args()

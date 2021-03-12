@@ -6,7 +6,7 @@ class Config():
         # 'seed' # Seed for the np random number generator
         self.args_dict = args_dict
         #enviroment parameters:
-        self.plotFigs = False
+        self.plotFigs = True
         self.debug = False
         self.saveData = False        # self.figure_format =  'EPS'
         # self.figure_format =  'PDF'
@@ -68,6 +68,7 @@ class Config():
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
         self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
+        self.ofc_to_PFC_active = True
         self.ofc_effect = 0.0  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
         self.ofc_effect_magnitude = 1.0
         self.ofc_effect_momentum = 0.9

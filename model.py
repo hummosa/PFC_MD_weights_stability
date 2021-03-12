@@ -168,11 +168,7 @@ class PFCMD():
             outAdd = np.dot(self.wOut, rout)
 
             # Gather MD inputs
-            if config.ofc_to_md_active:  # TODO make an ofc that keeps track of MD neurons specialization
-                # MDinp += np.array([.6,-.6]) if association_level in ofc.match_association_levels else np.array([-.6,.6])
-                # MDinp += np.array(
-                    # [-config.ofc_effect, config.ofc_effect]) if association_level in error_computations.match_association_levels else np.array([config.ofc_effect, -config.ofc_effect])
-                    
+            if config.ofc_to_md_active:                     
                 input_from_ofc = np.dot(error_computations.wOFC2MD , error_computations.vec_current_context )
                 MDinp += config.ofc_effect * input_from_ofc
 
@@ -193,6 +189,11 @@ class PFCMD():
             MDinps[i, :] = MDinp
 
             # Gather PFC inputs
+            if config.ofc_to_PFC_active:                     
+                input_from_ofc = np.dot(error_computations.wOFC2dlPFC , error_computations.vec_current_context )
+                xadd += config.ofc_effect * input_from_ofc
+
+
             if MDeffect:
                 # Add multplicative amplification of recurrent inputs.
                 self.MD2PFCMult = np.dot(
