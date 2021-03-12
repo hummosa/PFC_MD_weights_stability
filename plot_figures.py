@@ -465,3 +465,17 @@ def plot_q_values(data):
     ax.plot(vm_MDinputs.mean(axis=1))
     ax.legend(['MD 0 inp', 'MD 1 inp'])
     fig.savefig('./results/vmPFC.png')
+
+def ofc_plots(error_computations, trial, name= ''):
+    ## OFC plots
+    figs, axes = plt.subplots(2,2)
+    ax = axes[0,0]
+    ax.boxplot(error_computations.wOFC2dlPFC[:,0].reshape((5, 100)).T, showmeans=True, meanline=True)
+    # not entirely sure why these flips and T is necessary, but that is how it is.
+    ax = axes[1,1]
+    ax.boxplot(error_computations.wOFC2dlPFC[:,1].reshape((5, 100)).T, showmeans=True, meanline=True)
+    ax = axes[0,1]
+    ax.imshow(np.hstack([error_computations.wOFC2dlPFC[:,0].reshape((50, 10)), \
+        error_computations.wOFC2dlPFC[:,1].reshape((50, 10))]))
+    figs.savefig('./results/ofc_weights/OFC_w_display'+str(trial)+'_'+name+'.jpg')
+    plt.close(figs)

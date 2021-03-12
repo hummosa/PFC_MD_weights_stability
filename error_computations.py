@@ -212,8 +212,8 @@ class Error_computations:
         self.wOFC2MD = self.wOFC2MD/np.linalg.norm(self.wOFC2MD)
         # print(self.wOFC2MD) [[ 0.5 -0.5]  Works great.
                             #  [-0.5  0.5]]
-        self.wOFC2dlPFC = self.wOFC2dlPFC + np.outer( PFCmr-0.5, self.vec_current_context-0.5)
-        self.wOFC2dlPFC = self.wOFC2dlPFC/np.linalg.norm(self.wOFC2dlPFC)
+        self.wOFC2dlPFC = self.wOFC2dlPFC + 1e-4 * np.outer( PFCmr-PFCmr.mean(), self.vec_current_context-0.5)
+        self.wOFC2dlPFC = self.wOFC2dlPFC/(0.5* np.linalg.norm(self.wOFC2dlPFC))
 
         return (switch)
 
