@@ -82,7 +82,7 @@ def train(areas, data_gen, config):
         if switch and (ofc_control is 'on'): 
             config.ofc_effect = config.ofc_effect_magnitude
 
-        # if traini%50==0: ofc_plots(error_computations, traini, '_')
+        # if traini%250==0: ofc_plots(error_computations, traini, '_')
 
         ofc_signal = ofc.update_v(cue, outs[-1,:], target)
         if ofc_signal == "SWITCH":
@@ -185,7 +185,7 @@ def train(areas, data_gen, config):
     plot_weights(area_to_plot, weights, config)
     plot_rates(area_to_plot, rates, config)
     plot_what_i_want(area_to_plot, weights, rates, config)
-    # ofc_plots(error_computations, 2500, 'end_')
+    ofc_plots(error_computations, 2500, 'end_')
     #from IPython import embed; embed()
     dirname = config.args_dict['outdir'] + \
         "/"+config.args_dict['exp_name']+"/"
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     group = parser.add_argument(
         "--var2", default=1.0, nargs='?', type=float, help="arg_2")
     group = parser.add_argument(
-        "--var3", default=5.0, nargs='?', type=float, help="arg_3")
+        "--var3", default=40.0, nargs='?', type=float, help="arg_3")
     group = parser.add_argument("--outdir", default="./results",
                                 nargs='?',  type=str, help="pass a str for data directory")
     args = parser.parse_args()
