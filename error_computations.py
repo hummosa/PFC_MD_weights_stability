@@ -65,6 +65,7 @@ class Error_computations:
         self.current_context = "MATCH"
         self.p_reward = 0.5
         self.wOFC2MD = np.ones((self.config.Nmd, self.config.Nmd))
+        self.wOFC2dlPFC = np.ones((self.config.Npfc, self.config.Nmd))
         self.vec_current_context = np.array([0., 0.])
 
     def get_v(self):
@@ -73,7 +74,7 @@ class Error_computations:
     def set_context(self, ctx):
         self.prior = np.array([0.5, 0.5])
 
-    def update_v(self, stimulus, choice, target, MD):
+    def update_v(self, stimulus, choice, target, MDout, PFCmr):
         trial_type = "MATCH" if (stimulus == target).all() else "NON-MATCH"
         self.trial_history.append(trial_type)
         if len(self.trial_history) > self.horizon: self.trial_history = self.trial_history[-self.horizon:]
@@ -206,12 +207,14 @@ class Error_computations:
             #     p_stay = np.math.pow(p_r, T)
             #     p_switch = np.math.pow(p_r, t) * np.math.pow(p_r, T-t)
         # NOTE: MD related computations. First associate to the right MD cell, then output inputs to add to MD next trial
-        MDout = MD.mean(axis=0)
         self.vec_current_context = np.array([int(self.current_context=="MATCH"), int(self.current_context=="NON-MATCH")])
         self.wOFC2MD = self.wOFC2MD + np.outer( MDout-0.5, self.vec_current_context-0.5)
         self.wOFC2MD = self.wOFC2MD/np.linalg.norm(self.wOFC2MD)
         # print(self.wOFC2MD) [[ 0.5 -0.5]  Works great.
                             #  [-0.5  0.5]]
+        self.wOFC2dlPFC = self.wOFC2dlPFC + 1e-4 * np.outer( PFCmr-PFCmr.mean(), self.vec_current_context-0.5)
+        self.wOFC2dlPFC = self.wOFC2dlPFC/(0.5* np.linalg.norm(self.wOFC2dlPFC))
+
         return (switch)
 
     def get_cid(self, association_level):
