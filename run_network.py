@@ -185,7 +185,7 @@ def train(areas, data_gen, config):
     plot_weights(area_to_plot, weights, config)
     plot_rates(area_to_plot, rates, config)
     plot_what_i_want(area_to_plot, weights, rates, config)
-    ofc_plots(error_computations, 2500, 'end_')
+    # ofc_plots(error_computations, 2500, 'end_')
     #from IPython import embed; embed()
     dirname = config.args_dict['outdir'] + \
         "/"+config.args_dict['exp_name']+"/"

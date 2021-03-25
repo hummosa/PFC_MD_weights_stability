@@ -36,8 +36,8 @@ if cuda:
 class PFCMD():
     def __init__(self, config, args_dict={}):
         # * Adjust network excitation levels based on MD effect, Positive Rates, and activation fxn
-        # if not config.MDeffect:
-        config.G *= config.MDremovalCompensationFactor
+        if not config.MDeffect:
+            config.G *= config.MDremovalCompensationFactor
 
         # I don't want to have an if inside activation  as it is called at each time step of the simulation
         # But just defining within __init__ doesn't make it a member method of the class,
