@@ -264,12 +264,14 @@ if __name__ == "__main__":
         "--var3", default=40.0, nargs='?', type=float, help="arg_3")
     group = parser.add_argument("--outdir", default="./results",
                                 nargs='?',  type=str, help="pass a str for data directory")
+    group = parser.add_argument("--save_data_by_trial", default=False,
+                                nargs='?',  type=str, help="pass True to save data by trial")
     args = parser.parse_args()
     # can  assign args.x and args.y to vars
     # OpenMind shared directory: "/om2/group/halassa/PFCMD-ali-sabrina"
     args_dict = {'MDeffect': args.var1 , 'Gcompensation': args.var2, 'OFC_effect': args.var3,
                  'outdir':  args.outdir, 'exp_name': args.exp_name, 'seed': int(args.seed),
-                 "save_data_by_trial": False} # 'MDlr': args.y,'switches': args.x,  'MDactive': args.z,
+                 "save_data_by_trial": args.save_data_by_trial} # 'MDlr': args.y,'switches': args.x,  'MDactive': args.z,
 
     config = Config(args_dict)
     vm_config = Config(args_dict)
