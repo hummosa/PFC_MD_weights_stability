@@ -97,8 +97,8 @@ def train(areas, data_gen, config):
                                 vmPFC_input, q_values_after, vm_config, MDeffect=config.MDeffect,
                                 train=config.train)
 
-        # config.use_neural_q_values = True if bi > 6 else False  # take off training wheels for q_values learning
-        config.use_neural_q_values = False
+        # config.use_neural_q_values = True if bi > 7 else False  # take off training wheels for q_values learning
+        # config.use_neural_q_values = True
         if config.use_neural_q_values:
             q_values_before = vm_outs.mean(axis=0)
         else:
@@ -178,7 +178,7 @@ def train(areas, data_gen, config):
                     wMD2PFCMults,  wJrecs, MDpreTraces]
         rates = [PFCrates, MDinputs, MDrates,
                     Outrates, Inputs, Targets, MSEs]
-        # plot_q_values([vm_Outrates, vm_MDinputs])
+        plot_q_values([vm_Outrates, vm_MDinputs])
         plot_weights(area_to_plot, weights, config)
         plot_rates(area_to_plot, rates, config)
         plot_what_i_want(area_to_plot, weights, rates, config)

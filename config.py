@@ -8,7 +8,7 @@ class Config():
         #enviroment parameters:
         self.plotFigs = True
         self.debug = False
-        self.saveData = True        # self.figure_format =  'EPS'
+        self.saveData = False        # self.figure_format =  'EPS'
         self.figure_format =  'PNG'
         # self.figure_format =  'SVG'
         self.outdir = args_dict['outdir'] if 'outdir' in args_dict else './results/'
@@ -30,12 +30,12 @@ class Config():
         self.response_delay = 0             # time between cue end and begin response, if 0 all trial is averaged for response
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
-        self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '30', '90', '10', '70', '10']
+        self.block_schedule = ['90', '10'] *10 #, '90', '10', '90', '30', '90', '30', '90', '10', '70', '10']
         self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['off'] *40
                   
         #Network architecture
         self.use_neural_q_values = False
-        self.neural_vmPFC = False
+        self.neural_vmPFC = True
         self.wV_structured = True
         self.Ninputs = 4                      # total number of inputs
         self.Ncues = 2                     # How many of the inputs are task cues (UP, DOWN)
