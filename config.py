@@ -9,8 +9,8 @@ class Config():
         self.plotFigs = True
         self.debug = False
         self.saveData = False        # self.figure_format =  'EPS'
+        # self.figure_format =  'PDF'
         self.figure_format =  'PNG'
-        # self.figure_format =  'SVG'
         self.outdir = args_dict['outdir'] if 'outdir' in args_dict else './results/'
         self.RNGSEED = args_dict['seed'] if 'seed' in args_dict else 1                     
         
@@ -36,7 +36,7 @@ class Config():
         #Network architecture
         self.use_neural_q_values = False
         self.neural_vmPFC = True
-        self.use_baseline_error = False     # Whether to use a simple baseline error as a simple critic or omit.
+        self.use_baseline_error = True     # Whether to use a simple baseline error as a simple critic or omit.
         self.wV_structured = True
         self.Ninputs = 4                      # total number of inputs
         self.Ncues = 2                     # How many of the inputs are task cues (UP, DOWN)
@@ -45,7 +45,7 @@ class Config():
         self.Nofc = 500                      # number of ofc neurons
         self.Nsub = 200                     # number of neurons per cue
         self.Nout = 2                       # number of outputs
-        self.G = 0.75                       # Controls level of excitation in the net
+        self.G = 1                       # Controls level of excitation in the net
         self.reLoadWeights = False
 
                           #  then the output interference depends on the order of cues within a cycle typical values is 1e-5, can vary from 1e-4 to 1e-6
@@ -68,8 +68,10 @@ class Config():
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
         self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
-        self.ofc_effect = 0.2  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
-
+        self.ofc_to_PFC_active = True
+        self.ofc_effect = 0.0  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
+        self.ofc_effect_magnitude = 1.0
+        self.ofc_effect_momentum = 0.9
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 
         self.reinforce = True              # use reinforcement learning (node perturbation) a la Miconi 2017
@@ -86,4 +88,5 @@ class Config():
         self.reinforceReservoir = False # learning on reservoir weights also?
         if self.reinforceReservoir:
             self.perturbProb /= 10
+
 

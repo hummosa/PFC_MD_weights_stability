@@ -1,3 +1,4 @@
+from config import Config
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -63,6 +64,9 @@ class Error_computations:
         self.p_sm_snm_ns = np.array ([1/3, 1/3, 1/3])
         self.current_context = "MATCH"
         self.p_reward = 0.5
+        self.wOFC2MD = np.ones((self.config.Nmd, self.config.Nmd))
+        self.wOFC2dlPFC = np.ones((self.config.Npfc, self.config.Nmd))
+        self.vec_current_context = np.array([0., 0.])
 
     def get_v(self):
         return (np.array(self.prior))
@@ -70,7 +74,7 @@ class Error_computations:
     def set_context(self, ctx):
         self.prior = np.array([0.5, 0.5])
 
-    def update_v(self, stimulus, choice, target):
+    def update_v(self, stimulus, choice, target, MDout, PFCmr):
         trial_type = "MATCH" if (stimulus == target).all() else "NON-MATCH"
         self.trial_history.append(trial_type)
         if len(self.trial_history) > self.horizon: self.trial_history = self.trial_history[-self.horizon:]
@@ -111,13 +115,66 @@ class Error_computations:
         self.p_sm_snm_ns = np.array ([p_sm_T, p_snm_T, p_ns_T])
 
         # ALTERNATIVELY:
-        horizon = [t == "MATCH" for t in self.trial_history]
+
+        # horizon = [t == "MATCH" for t in self.trial_history]
+        # choices = self.Sabrina_Q_values if self.current_context is "MATCH" else np.flip(self.Sabrina_Q_values)
         
+        # current_reward = target[np.argmax(choice.mean(axis=0))] # 1 if choice is correct, 0 otherwise
+        # self.p_reward = 0.95 * self.p_reward + 0.05 * current_reward 
+        # choices = np.array([self.p_reward, 1-self.p_reward])
+
+
+        # stay_votes = np.choose(horizon, choices)
+        # leave_votes = 1- stay_votes
+        # ratio_switch_t = []
+        # for t in range(T):
+        #     like_switch = np.prod(stay_votes[:t]) * np.prod(leave_votes[t:])
+        #     like_stay   = np.prod(stay_votes)
+        #     ratio_switch_t.append( like_switch/ (like_switch + like_stay) )
+
+        # #Integrating from all horizon:
+        # ratio_switch = np.array(ratio_switch_t).mean()
+        # p_sm_T = 1. if self.current_context == "MATCH" else 0. 
+        # p_snm_T = ratio_switch 
+        # p_ns_T = self.p_reward 
+        # self.p_sm_snm_ns = np.array ([p_sm_T, p_snm_T, p_ns_T])
+
+        # if ratio_switch > 0.8: #flip context
+        #     if self.current_context is "MATCH": self.current_context = "NON-MATCH"
+        #     else: self.current_context = "MATCH"
+        #     #Note: reset reward
+        #     self.p_reward = 0.1
+        #     #get trial with max switch prob:
+        #     max_t = np.argmax(ratio_switch_t)
+        #     # Purge all trial history entries before. Assume it is where the switch happened.
+        #     self.trial_history = self.trial_history[max_t:]
+
+
+        #OTHER ATTEMPT:
+        switch_thresh =0.85
+        switch = False
+        trial_type = "MATCH" if (stimulus == target).all() else "NON-MATCH"
+        self.trial_history.append(trial_type)
+        if len(self.trial_history) > self.config.horizon: self.trial_history = self.trial_history[-self.horizon:]
+
+        horizon = [t == "MATCH" for t in self.trial_history]
+        choices = self.Sabrina_Q_values if self.current_context is "MATCH" else np.flip(self.Sabrina_Q_values)
+    #     print(horizon)
         current_reward = target[np.argmax(choice.mean(axis=0))] # 1 if choice is correct, 0 otherwise
-        self.p_reward = 0.95 * self.p_reward + 0.05 * current_reward 
+    #     print('cue: ', stimulus, ' target', target, ' choice: ', choice.mean(axis=0), ' argmax: ', np.argmax(choice.mean(axis=0)))
+        self.p_reward = 0.98 * self.p_reward + 0.02 * current_reward 
         choices = np.array([self.p_reward, 1-self.p_reward])
 
-        stay_votes = np.choose(horizon, choices)
+
+        # It should be: get current behavior (match vs non), and if matches current context belief (match vs non). 
+        # because sometimes behavior might not match belief fully. Flip the trials that do not match belief.
+        # Fast forward, get true "Match" "nonMatch" trials ground truth. Which I have already!!
+        # horizon = trial_history == current_belief !!!!
+        # stay_votes = np.choose(horizon, [1-p_reward, p_reward])
+        horizon = [t == self.current_context for t in self.trial_history]
+        choices = np.array([1-self.p_reward, self.p_reward])
+        stay_votes = np.choose(horizon, choices) #Makes no sense. It made sense when I had choices as v1 v2, but now it is p(r)
+
         leave_votes = 1- stay_votes
         ratio_switch_t = []
         for t in range(T):
@@ -132,25 +189,33 @@ class Error_computations:
         p_ns_T = self.p_reward 
         self.p_sm_snm_ns = np.array ([p_sm_T, p_snm_T, p_ns_T])
 
-        if ratio_switch > 0.8: #flip context
-            if self.current_context is "MATCH": self.current_context = "NON-MATCH"
-            else: self.current_context = "MATCH"
+        if ratio_switch > switch_thresh: #flip context
+            if self.current_context is "MATCH": 
+                self.current_context = "NON-MATCH"
+            else: 
+                self.current_context = "MATCH"
+            switch = True
+            # self.config.ofc_effect = 2.0 # reset ofc effect to 1 and let it decay over the next few trials back to zero.
             #Note: reset reward
-            self.p_reward = 0.1
+    #         self.p_reward = 0.1
             #get trial with max switch prob:
             max_t = np.argmax(ratio_switch_t)
-            # Purge all trial history entries before. Assume it is where the switch happened.
-            self.trial_history = self.trial_history[max_t:]
+            # p_r = # avg last ten rewards #probability of reward in current context using current action. simple average of recent rewards, but it might become unstable around change points. 
 
+            # p_switch, p_stay = [], []
+            # for t in range(T):
+            #     p_stay = np.math.pow(p_r, T)
+            #     p_switch = np.math.pow(p_r, t) * np.math.pow(p_r, T-t)
+        # NOTE: MD related computations. First associate to the right MD cell, then output inputs to add to MD next trial
+        self.vec_current_context = np.array([int(self.current_context=="MATCH"), int(self.current_context=="NON-MATCH")])
+        self.wOFC2MD = self.wOFC2MD + np.outer( MDout-0.5, self.vec_current_context-0.5)
+        self.wOFC2MD = self.wOFC2MD/np.linalg.norm(self.wOFC2MD)
+        # print(self.wOFC2MD) [[ 0.5 -0.5]  Works great.
+                            #  [-0.5  0.5]]
+        self.wOFC2dlPFC = self.wOFC2dlPFC + 1e-4 * np.outer( PFCmr-PFCmr.mean(), self.vec_current_context-0.5)
+        self.wOFC2dlPFC = self.wOFC2dlPFC/(0.5* np.linalg.norm(self.wOFC2dlPFC))
 
-        #OTHER ATTEMPT:
-        # p_r = # avg last ten rewards #probability of reward in current context using current action. simple average of recent rewards, but it might become unstable around change points. 
-
-        # p_switch, p_stay = [], []
-        # for t in range(T):
-        #     p_stay = np.math.pow(p_r, T)
-        #     p_switch = np.math.pow(p_r, t) * np.math.pow(p_r, T-t)
-
+        return (switch)
 
     def get_cid(self, association_level):
         if self.config.follow == 'association_levels':

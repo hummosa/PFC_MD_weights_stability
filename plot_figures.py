@@ -170,26 +170,13 @@ def plot_rates(pfcmd, rates, config):
     pltu.axes_labels(ax, 'Trials', 'non-match     V1     Match')
     ax.set_title('Blue: Correct    Orange: response')
     ax.set_ylim([-0.8, 1.8])
-    # ax.set_xlim([0, 2200])
-    # plt.box(False)
-    # print(f'length: {len(pfcmd.hx_of_ofc_signal_lengths)}')
-    strat_offsets = [1.48, 0.1] * 50
-
-    if len(pfcmd.hx_of_ofc_signal_lengths) > 1:
-        for bi, directed_trials in pfcmd.hx_of_ofc_signal_lengths:
-            # print(bi*config.trials_per_block, directed_trials)
-            strat_offset = strat_offsets[0]
-            strat_offsets= strat_offsets[1:] # hack to alternative the bars, then fix in illustoratro if they are reversed. TODO detect which MD is which beforehand
-            ax.plot(range(int(bi*config.trials_per_block), int(bi*config.trials_per_block)+ directed_trials), np.ones(directed_trials)*strat_offset, color='gray')
-    try:
-        rm = np.convolve(Corrects, np.ones((40,))/40, mode='valid')
-        ax.plot(rm, color='black', linewidth= 0.5, alpha = 0.8)
-        ax.plot(Inputs[:,2], color='tab:red', alpha=0.7, linewidth=0.5)
-    except:
-        pass
+    
+    rm = np.convolve(Corrects, np.ones((40,))/40, mode='same')
+    ax.plot(rm, color='black', linewidth= 0.5, alpha = 0.8)
+    ax.plot(Inputs[:,2], color='tab:red', alpha=0.7, linewidth=0.5)
     
     for bi in range(config.Nblocks):
-        plt.text((1/13)* (0.74+bi), 0.1, str(config.block_schedule[bi]), transform=ax.transAxes)
+        plt.text((1/(config.Nblocks+1))* (0.74+bi), 0.1, str(config.block_schedule[bi]), transform=ax.transAxes)
     
     
     ax = pfcmd.figOuts.add_subplot(212)
@@ -441,7 +428,7 @@ def plot_what_i_want(pfcmd, weights, rates, config):
         plt.text(0.01, 0.1, str(Inputs[ai])+ str(Targets[ai]), transform=ax.transAxes)
         ax.set_ylim([0, 15])        
         ax.set_xlim([0, .7])        
-    pfcmd.figCustom.tight_layout()
+    # pfcmd.figCustom.tight_layout()
 
 
 
@@ -467,17 +454,38 @@ class monitor():
             pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
                         
 def plot_q_values(data):
-    vm_Outrates, vm_MDinputs, vmMDouts = data
+    vm_Outrates, vm_MDinputs, vmMDouts, vm_Inputs = data
     fig, axes = plt.subplots(3,1)
     fig.set_size_inches([9,6])
     ax = axes[0]
     ax.plot(vm_Outrates.mean(axis=1), linewidth=0.5)
-    ax.set_title('vmPFC predictions')
-    ax.legend(['v1 estimate', 'v2 est'])
+    ax.set_title('vmPFC v1 v2 predictions')
+    # ax.legend(['v1 estimate', 'v2 est'])
     ax = axes[1]
     ax.set_title('vmPFC related MD input averages')
     ax.plot(vm_MDinputs.mean(axis=1), linewidth=0.5)
     ax.plot(vmMDouts.mean(axis=1), 'o', markersize=0.5, linewidth=0.5)
-    ax.legend(['MD 0 inp', 'MD 1 inp'])
+
+    ax = axes[2]
+    ax.set_title('vmPFC inputs')
+    ax.plot(vm_Inputs[:,0], linewidth=0.5, label='matchiness')
+    ax.plot(vm_Inputs[:,1], linewidth=0.5, label='q-value[0]')
+    ax.legend()
+    
+    # ax.legend(['MD 0 inp', 'MD 1 inp'])
     # fig.savefig('./results/vmPFC.png')
     return (fig)
+
+def ofc_plots(error_computations, trial, name= ''):
+    ## OFC plots
+    figs, axes = plt.subplots(2,2)
+    ax = axes[0,0]
+    ax.boxplot(error_computations.wOFC2dlPFC[:,0].reshape((5, 100)).T, showmeans=True, meanline=True)
+    # not entirely sure why these flips and T is necessary, but that is how it is.
+    ax = axes[1,1]
+    ax.boxplot(error_computations.wOFC2dlPFC[:,1].reshape((5, 100)).T, showmeans=True, meanline=True)
+    ax = axes[0,1]
+    ax.imshow(np.hstack([error_computations.wOFC2dlPFC[:,0].reshape((50, 10)), \
+        error_computations.wOFC2dlPFC[:,1].reshape((50, 10))]))
+    figs.savefig('./results/ofc_weights/OFC_w_display'+str(trial)+'_'+name+'.jpg')
+    plt.close(figs)
