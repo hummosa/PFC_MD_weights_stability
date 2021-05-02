@@ -111,15 +111,11 @@ class Error_computations:
         self.p_sm_snm_ns = np.array ([p_sm_T, p_snm_T, p_ns_T])
 
         # ALTERNATIVELY:
-        # v1, v2 = self.Sabrina_Q_values
-
         horizon = [t == "MATCH" for t in self.trial_history]
-        choices = self.Sabrina_Q_values if self.current_context is "MATCH" else np.flip(self.Sabrina_Q_values)
         
         current_reward = target[np.argmax(choice.mean(axis=0))] # 1 if choice is correct, 0 otherwise
         self.p_reward = 0.95 * self.p_reward + 0.05 * current_reward 
         choices = np.array([self.p_reward, 1-self.p_reward])
-
 
         stay_votes = np.choose(horizon, choices)
         leave_votes = 1- stay_votes

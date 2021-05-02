@@ -21,7 +21,7 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 8                   # number of blocks for the simulation
+        self.Nblocks = 12                   # number of blocks for the simulation
         self.trials_per_block = 600
         self.tau = 0.02
         self.dt = 0.001
@@ -36,6 +36,7 @@ class Config():
         #Network architecture
         self.use_neural_q_values = False
         self.neural_vmPFC = True
+        self.use_baseline_error = False     # Whether to use a simple baseline error as a simple critic or omit.
         self.wV_structured = True
         self.Ninputs = 4                      # total number of inputs
         self.Ncues = 2                     # How many of the inputs are task cues (UP, DOWN)
@@ -60,7 +61,6 @@ class Config():
         self.MDlearningBiasFactor = 1.     # Switched dynamic Bias calc based on average, this gets multiplied with running avg resulting in effective bias for hebbian learning.
         self.cueFactor = 0.5 #args_dict['CueFactor']#0.5# 0.75  1.5 Ali halved it when I added cues going to both PFC regions, i.e two copies of input. But now working ok even with only one copy of input.
         self.delayed_response = 0 #50       # in ms, Reward model based on last 50ms of trial, if 0 take mean error of entire trial. Impose a delay between cue and stimulus.
-
         # OFC
         self.follow = 'behavioral_context' # 'association_levels'  # in estimating baseline_err whether to track each context (match, non-match) or more granularily track assocation levels 
         self.horizon = 10               # how many trials to look back when calculating Q values for actions available.

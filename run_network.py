@@ -50,8 +50,8 @@ def train(areas, data_gen, config):
 
     q_values_before = np.array([0.5, 0.5])
     for traini in tqdm.tqdm(range(Ntrain)):
+        blocki = traini // config.trials_per_block
         if traini % config.trials_per_block == 0:
-            blocki = traini // config.trials_per_block
             association_level, ofc_control = next(data_gen.block_generator(
                 blocki))  # Get the context index for this current block
         if config.debug:
@@ -92,12 +92,12 @@ def train(areas, data_gen, config):
 
             vmPFC_input = np.array([matchness, q_values_before[0]])
             # _, routs, vm_outs, MDouts, MDinps, _ =\
-            _, _, vm_outs, _, vm_MDinps,_ =\
+            _, _, vm_outs, vm_MDouts, vm_MDinps,_ =\
             vmPFC.run_trial(association_level, q_values_before, error_computations_vmPFC,
                                 vmPFC_input, q_values_after, vm_config, MDeffect=config.MDeffect,
                                 train=config.train)
 
-        # config.use_neural_q_values = True if bi > 7 else False  # take off training wheels for q_values learning
+        config.use_neural_q_values = True if blocki > 5 else False  # take off training wheels for q_values learning
         # config.use_neural_q_values = True
         if config.use_neural_q_values:
             q_values_before = vm_outs.mean(axis=0)
@@ -178,7 +178,8 @@ def train(areas, data_gen, config):
                     wMD2PFCMults,  wJrecs, MDpreTraces]
         rates = [PFCrates, MDinputs, MDrates,
                     Outrates, Inputs, Targets, MSEs]
-        plot_q_values([vm_Outrates, vm_MDinputs])
+        if config.neural_vmPFC:
+            vmPFC_plot = plot_q_values([vm_Outrates, vm_MDinputs, vm_MDouts])
         plot_weights(area_to_plot, weights, config)
         plot_rates(area_to_plot, rates, config)
         plot_what_i_want(area_to_plot, weights, rates, config)
@@ -200,6 +201,9 @@ def train(areas, data_gen, config):
                                 facecolor='w', edgecolor='w', format=config.figure_format)
         area_to_plot.figTrials.savefig(fn('trials'), dpi=pltu.fig_dpi,
                                 facecolor='w', edgecolor='w', format=config.figure_format)
+        vmPFC_plot.savefig(fn('vmPFC'), dpi=pltu.fig_dpi,
+                                facecolor='w', edgecolor='w', format=config.figure_format)
+        
         if config.debug:
             area_to_plot.fig_monitor = plt.figure()
             area_to_plot.monitor.plot(area_to_plot.fig_monitor, area_to_plot)

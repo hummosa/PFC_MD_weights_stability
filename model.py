@@ -294,8 +294,12 @@ class PFCMD():
         cid = error_computations.get_cid(association_level)
         trial_err, all_contexts_err = error_computations.get_trial_err(
             errors, association_level)
-        baseline_err = error_computations.baseline_err
-
+        
+        if config.use_baseline_error:
+            baseline_err = error_computations.baseline_err
+        else:
+            baseline_err = np.zeros_like(error_computations.baseline_err)
+        
         if train:  # and config.reinforce:
             # with learning using REINFORCE / node perturbation (Miconi 2017),
             #  the weights are only changed once, at the end of the trial

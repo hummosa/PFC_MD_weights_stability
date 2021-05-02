@@ -467,14 +467,17 @@ class monitor():
             pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
                         
 def plot_q_values(data):
-    vm_Outrates, vm_MDinputs = data
+    vm_Outrates, vm_MDinputs, vmMDouts = data
     fig, axes = plt.subplots(3,1)
+    fig.set_size_inches([9,6])
     ax = axes[0]
-    ax.plot(vm_Outrates.mean(axis=1))
+    ax.plot(vm_Outrates.mean(axis=1), linewidth=0.5)
     ax.set_title('vmPFC predictions')
     ax.legend(['v1 estimate', 'v2 est'])
     ax = axes[1]
     ax.set_title('vmPFC related MD input averages')
-    ax.plot(vm_MDinputs.mean(axis=1))
+    ax.plot(vm_MDinputs.mean(axis=1), linewidth=0.5)
+    ax.plot(vmMDouts.mean(axis=1), 'o', markersize=0.5, linewidth=0.5)
     ax.legend(['MD 0 inp', 'MD 1 inp'])
-    fig.savefig('./results/vmPFC.png')
+    # fig.savefig('./results/vmPFC.png')
+    return (fig)
