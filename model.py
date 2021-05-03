@@ -36,8 +36,8 @@ if cuda:
 class PFCMD():
     def __init__(self, config, args_dict={}):
         # * Adjust network excitation levels based on MD effect, Positive Rates, and activation fxn
-        # if not config.MDeffect:
-        config.G *= config.MDremovalCompensationFactor
+        if not config.MDeffect:
+            config.G *= config.MDremovalCompensationFactor
 
         # I don't want to have an if inside activation  as it is called at each time step of the simulation
         # But just defining within __init__ doesn't make it a member method of the class,
@@ -168,10 +168,9 @@ class PFCMD():
             outAdd = np.dot(self.wOut, rout)
 
             # Gather MD inputs
-            if config.ofc_to_md_active:  # TODO make an ofc that keeps track of MD neurons specialization
-                # MDinp += np.array([.6,-.6]) if association_level in ofc.match_association_levels else np.array([-.6,.6])
-                MDinp += np.array(
-                    [-config.ofc_effect, config.ofc_effect]) if association_level in error_computations.match_association_levels else np.array([config.ofc_effect, -config.ofc_effect])
+            if config.ofc_to_md_active:                     
+                input_from_ofc = np.dot(error_computations.wOFC2MD , error_computations.vec_current_context )
+                MDinp += config.ofc_effect * input_from_ofc
 
             if config.positiveRates:
                 MDinp += config.dt/config.tau * \
@@ -190,6 +189,7 @@ class PFCMD():
             MDinps[i, :] = MDinp
 
             # Gather PFC inputs
+
             if MDeffect:
                 # Add multplicative amplification of recurrent inputs.
                 self.MD2PFCMult = np.dot(
@@ -204,6 +204,10 @@ class PFCMD():
                 xadd += np.dot(self.wMD2PFC, MDout)
             else:
                 xadd = np.dot(self.Jrec, rout)
+
+            if config.ofc_to_PFC_active:                     
+                input_from_ofc = np.dot(error_computations.wOFC2dlPFC , error_computations.vec_current_context )
+                xadd += config.ofc_effect * input_from_ofc
 
             if i < config.cuesteps:
                 # if MDeffect and useMult:
