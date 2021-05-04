@@ -38,8 +38,10 @@ for yidx=1:numel(subjs)
         else
             t = contextchange(cidx);
         end
+        d = t - s;
 
-        M(yidx,s:t) = mean(Y(yidx,s:t),'omitnan');
+        M(yidx,s:s+floor(d/4)) = mean(Y(yidx,s:s+floor(d/4)),'omitnan');
+        M(yidx,s+floor(d/4)+1:t) = mean(Y(yidx,s+floor(d/4)+1:t),'omitnan');
     end
 end
 
