@@ -3,6 +3,7 @@
 
 """Extends code by Aditya Gilra. Some reservoir tweaks are inspired by Nicola and Clopath, arxiv, 2016 and Miconi 2016."""
 
+from re import match
 import torch
 import json
 from config import Config
@@ -62,6 +63,8 @@ def train(areas, data_gen, config):
     q_values_before = np.array([0.5, 0.5])
     for traini in tqdm.tqdm(range(Ntrain)):
         blocki = traini // config.trials_per_block
+        # if blocki > 4: config.trials_per_block = config.trials_per_block_phase2 # reduce the number of trials in block to speed up testing phase but allow long learning phase.
+
         if traini % config.trials_per_block == 0:
             association_level, ofc_control = next(data_gen.block_generator(
                 blocki))  # Get the context index for this current block
@@ -77,14 +80,19 @@ def train(areas, data_gen, config):
         _, routs, outs, MDouts, MDinps, errors = \
             pfcmd.run_trial(association_level, q_values_before, error_computations, cue, target, config, MDeffect=config.MDeffect,
                             train=config.train)
-
+        
+        out_higher_mean = 1.*( outs[:,0].mean() > outs[:,1].mean() )
+        trial_type =  1. * (target[0] == cue[0])  # Targets is [n_trials x 2] Inputs is N_trials x 4 (cue and q values)
+        Responses= 1.* (out_higher_mean == Inputs[:,0]) #* 0.8 + 0.1     #+ np.random.uniform(-noise, noise, size=(Ntrain,) )
+        reward = 1. * (target[0] == out_higher_mean)
+        # print(reward)
+        ####### Commenting out OFC Bayesian model experiemnt
         switch = error_computations.update_v(cue, outs, target, MDouts.mean(axis=0), routs.mean(axis=0))
         config.ofc_effect = config.ofc_effect_momentum * config.ofc_effect
         if switch and (ofc_control is 'on'): 
             config.ofc_effect = config.ofc_effect_magnitude
-
         # if traini%250==0: ofc_plots(error_computations, traini, '_')
-
+        ########
         ofc_signal = ofc.update_v(cue, outs[-1,:], target)
         if ofc_signal == "SWITCH":
             ofc.switch_context()
@@ -94,12 +102,14 @@ def train(areas, data_gen, config):
             out_trial_avg = outs.mean(axis=0)
             outs_centered = out_trial_avg- out_trial_avg.mean() +0.5
             matchness = np.dot(cue, outs_centered)
-
-            vmPFC_input = np.array([matchness, q_values_before[0]])
+            # print(f'matchiness: {matchness}, discretized: {np.round(matchness)}')
+            
+            vmPFC_input = np.array([np.round(matchness), 1-np.round(matchness)])
+            vmPFC_target = np.array([trial_type, 1- trial_type]) # PREdict which strategy was rewarded??  #np.array([reward, 1- reward]) #q_values_after
             # _, routs, vm_outs, MDouts, MDinps, _ =\
             _, _, vm_outs, vm_MDouts, vm_MDinps,_ =\
             vmPFC.run_trial(association_level, q_values_before, error_computations_vmPFC,
-                                vmPFC_input, q_values_after, vm_config, MDeffect=config.MDeffect,
+                                vmPFC_input, vmPFC_target, vm_config, MDeffect=config.MDeffect,
                                 train=config.train)
 
         config.use_neural_q_values = True if blocki > 5 else False  # take off training wheels for q_values learning
@@ -269,7 +279,7 @@ if __name__ == "__main__":
     group = parser.add_argument(
         "--var2", default=1.0, nargs='?', type=float, help="arg_2")
     group = parser.add_argument(
-        "--var3", default=40.0, nargs='?', type=float, help="arg_3")
+        "--var3", default=1.0, nargs='?', type=float, help="arg_3")
     group = parser.add_argument("--outdir", default="./results",
                                 nargs='?',  type=str, help="pass a str for data directory")
     args = parser.parse_args()

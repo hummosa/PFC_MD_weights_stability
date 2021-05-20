@@ -23,6 +23,7 @@ class Config():
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
         self.Nblocks = 12                   # number of blocks for the simulation
         self.trials_per_block = 600
+        self.trials_per_block_phase2 = 200
         self.tau = 0.02
         self.dt = 0.001
         self.tsteps = 200                   # number of timesteps in a trial
@@ -30,6 +31,7 @@ class Config():
         self.response_delay = 0             # time between cue end and begin response, if 0 all trial is averaged for response
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
+        # self.block_schedule = ['90', '10'] *10 #, '90', '10', '90', '30', '90', '30', '90', '10', '70', '10']
         self.block_schedule = ['90', '10'] *10 #, '90', '10', '90', '30', '90', '30', '90', '10', '70', '10']
         self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['off'] *40
                   
@@ -69,8 +71,8 @@ class Config():
         self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
         self.ofc_to_md_active = False
         self.ofc_to_PFC_active = True
-        self.ofc_effect = 0.0  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
-        self.ofc_effect_magnitude = 1.0
+        self.ofc_effect = 0.0   # this is handled by the model. It decays to zero. The network sets it to ofc_effect_magnitude at switch time.
+        self.ofc_effect_magnitude = 1.0 # magnitude of input from oFC toone MD neuron and inhibition to the other. 
         self.ofc_effect_momentum = 0.9
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 

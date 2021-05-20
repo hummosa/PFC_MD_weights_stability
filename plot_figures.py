@@ -468,8 +468,8 @@ def plot_q_values(data):
 
     ax = axes[2]
     ax.set_title('vmPFC inputs')
-    ax.plot(vm_Inputs[:,0], linewidth=0.5, label='matchiness')
-    ax.plot(vm_Inputs[:,1], linewidth=0.5, label='q-value[0]')
+    ax.plot(vm_Inputs[:,0],'.', linewidth=0.5, label='matchiness')
+    ax.plot(vm_Inputs[:,1],'.', linewidth=0.5, label='q-value[0]')
     ax.legend()
     
     # ax.legend(['MD 0 inp', 'MD 1 inp'])
