@@ -6,7 +6,7 @@ class Config():
         # 'seed' # Seed for the np random number generator
         self.args_dict = args_dict
         #enviroment parameters:
-        self.plotFigs = True
+        self.plotFigs = False
         self.debug = False
         self.saveData = False        # self.figure_format =  'EPS'
         # self.figure_format =  'PDF'
@@ -30,12 +30,14 @@ class Config():
         self.response_delay = 0             # time between cue end and begin response, if 0 all trial is averaged for response
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
-        self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
-        self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['on'] *40
-        self.block_schedule = ['90', '10','90', '10','90', '30', '70', '90', '50', '90'] + ['10', '90']*10
+        # self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
+        self.block_schedule = ['90', '10', '90', '10', '90', '30', '70', '10', '50', '10'] + ['90', '10']*10
         #['90', '10', '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
         self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['on'] *40
 
+        # self.block_schedule = ['90', '10'] * 10 #, '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
+        # self.ofc_control_schedule= ['on'] *40  + ['match', 'non-match'] *1 + ['on'] *40
+                  
         #Network architecture
         self.use_neural_q_values = False
         self.neural_vmPFC = False
@@ -55,7 +57,7 @@ class Config():
         self.tauError = 0.001            # smooth the error a bit, so that weights don't fluctuate
         self.modular  = False                # Assumes PFC modules and pass input to only one module per tempral context.
         self.MDeffect = True                # whether to have MD present or not
-        self.MDremovalCompensationFactor = 2.# If MD effect is removed, excitation drops, multiply recurrent connection conductance by this factor to compensate
+        self.MDremovalCompensationFactor = 1.3 # If MD effect is removed, excitation drops, multiply recurrent connection conductance by this factor to compensate
         self.MDamplification = 30.           # Factor by which MD amplifies PFC recurrent connections multiplicatively
         self.MDlearningrate = 5e-5 #1e-4 # 1e-7   #Separate learning rate for Hebbian plasticity at MD-PFC synapses.
         self.MDrange = 0.1                  # Allowable range for MD-PFC synapses.
@@ -70,8 +72,8 @@ class Config():
         self.OFC_reward_hx = True           # model ofc as keeping track of current strategy and recent reward hx for each startegy.
         self.use_context_belief_to_switch_MD = True  # input routing per current context or per context belief
         self.no_of_trials_with_ofc_signal = 20 #no of trials with OFC sparse switch control signal.
-        self.ofc_to_md_active = False
-        self.ofc_to_PFC_active = True
+        self.ofc_to_md_active = True
+        self.ofc_to_PFC_active = False
         self.ofc_effect = 0.0  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
         self.ofc_effect_magnitude = 1.0
         self.ofc_effect_momentum = 0.9
