@@ -266,7 +266,7 @@ def train(areas, data_gen, config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    group = parser.add_argument("exp_name", default="new_code",
+    group = parser.add_argument("exp_name", default="data_runs",
                                 nargs='?',  type=str, help="pass a str for experiment name")
     group = parser.add_argument(
         "seed", default=2, nargs='?',  type=float, help="simulation seed")
@@ -274,10 +274,10 @@ if __name__ == "__main__":
     group = parser.add_argument(
         "--var1", default=1, nargs='?', type=float, help="arg_1")
     group = parser.add_argument(
-        "--var2", default=1.0, nargs='?', type=float, help="arg_2")
+        "--var2", default=1.3, nargs='?', type=float, help="arg_2")
     group = parser.add_argument(
-        "--var3", default=40.0, nargs='?', type=float, help="arg_3")
-    group = parser.add_argument("--outdir", default="./results",
+        "--var3", default=0.0, nargs='?', type=float, help="arg_3")
+    group = parser.add_argument("--outdir", default="./results2",
                                 nargs='?',  type=str, help="pass a str for data directory")
     group = parser.add_argument("--save_data_by_trial", default=False,
                                 nargs='?',  type=str, help="pass True to save data by trial")
