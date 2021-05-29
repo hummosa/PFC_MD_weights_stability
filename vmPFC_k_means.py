@@ -21,7 +21,7 @@ class OFC:
     # NOTE: Sabrina -- Alpha may need to be changed when I integrate into
     # the complete model
 
-    def __init__(self, switch_thresh=0.3, horizon_sz=15):
+    def __init__(self, switch_thresh=0.2, horizon_sz=20):
         self.switch_thresh = switch_thresh
         self.horizon_sz = horizon_sz
 

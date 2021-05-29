@@ -37,7 +37,11 @@ from model import PFCMD
 
 def train(areas, data_gen, config):
     pfcmd, vmPFC = areas
-    Ntrain = config.trials_per_block * config.Nblocks
+
+    if len(config.variable_trials_per_block) == 0:
+        Ntrain = config.trials_per_block * config.Nblocks
+    else: 
+        Ntrain = np.sum(config.variable_trials_per_block)
 
     # Containers to save simulation variables
     wOuts = np.zeros(shape=(Ntrain, config.Nout, config.Npfc))
@@ -60,7 +64,16 @@ def train(areas, data_gen, config):
 
     q_values_before = np.array([0.5, 0.5])
     for traini in tqdm.tqdm(range(Ntrain)):
-        if traini % config.trials_per_block == 0:
+        if len(config.variable_trials_per_block) > 0:
+            if traini == 0:
+                blocki = 0
+                association_level, ofc_control = next(data_gen.block_generator(
+                    blocki))  # Get the context index for this current block
+            elif traini in np.cumsum(config.variable_trials_per_block):
+                blocki = blocki + 1
+                association_level, ofc_control = next(data_gen.block_generator(
+                    blocki))  # Get the context index for this current block
+        elif traini % config.trials_per_block == 0:
             blocki = traini // config.trials_per_block
             association_level, ofc_control = next(data_gen.block_generator(
                 blocki))  # Get the context index for this current block
@@ -169,6 +182,8 @@ def train(areas, data_gen, config):
     tpb = config.trials_per_block
     if len(pfcmd.hx_of_ofc_signal_lengths) > 0:
         for bi in range(config.Nblocks):
+            if len(config.variable_trials_per_block) > 0:
+               tpb = config.variable_tirlas_per_block[bi]
             ofc_hx = np.array(pfcmd.hx_of_ofc_signal_lengths)
             if bi in ofc_hx[:,0]:
                 if data_generator.ofc_control_schedule[bi] is 'match':
@@ -184,7 +199,7 @@ def train(areas, data_gen, config):
     # plot_q_values([vm_Outrates, vm_MDinputs])
     plot_weights(area_to_plot, weights, config)
     plot_rates(area_to_plot, rates, config)
-    plot_what_i_want(area_to_plot, weights, rates, config)
+    #plot_what_i_want(area_to_plot, weights, rates, config)
     # ofc_plots(error_computations, 2500, 'end_')
     #from IPython import embed; embed()
     dirname = config.args_dict['outdir'] + \
@@ -202,8 +217,8 @@ def train(areas, data_gen, config):
                                 facecolor='w', edgecolor='w', format=config.figure_format)
         area_to_plot.figOuts.savefig(fn('behavior'),  transparent=True,dpi=pltu.fig_dpi,
                                 facecolor='w', edgecolor='w', format=config.figure_format)
-        area_to_plot.figRates.savefig(fn('rates'),    transparent=True,dpi=pltu.fig_dpi,
-                                facecolor='w', edgecolor='w', format=config.figure_format)
+        #area_to_plot.figRates.savefig(fn('rates'),    transparent=True,dpi=pltu.fig_dpi,
+                                #facecolor='w', edgecolor='w', format=config.figure_format)
         if config.debug:
             area_to_plot.figTrials.savefig(fn('trials'),  transparent=True,dpi=pltu.fig_dpi,
                                     facecolor='w', edgecolor='w', format=config.figure_format)
@@ -251,7 +266,7 @@ def train(areas, data_gen, config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    group = parser.add_argument("exp_name", default="new_code",
+    group = parser.add_argument("exp_name", default="data_runs",
                                 nargs='?',  type=str, help="pass a str for experiment name")
     group = parser.add_argument(
         "seed", default=2, nargs='?',  type=float, help="simulation seed")
@@ -259,10 +274,10 @@ if __name__ == "__main__":
     group = parser.add_argument(
         "--var1", default=1, nargs='?', type=float, help="arg_1")
     group = parser.add_argument(
-        "--var2", default=1.0, nargs='?', type=float, help="arg_2")
+        "--var2", default=1.3, nargs='?', type=float, help="arg_2")
     group = parser.add_argument(
-        "--var3", default=40.0, nargs='?', type=float, help="arg_3")
-    group = parser.add_argument("--outdir", default="./results",
+        "--var3", default=0.0, nargs='?', type=float, help="arg_3")
+    group = parser.add_argument("--outdir", default="./results2",
                                 nargs='?',  type=str, help="pass a str for data directory")
     group = parser.add_argument("--save_data_by_trial", default=False,
                                 nargs='?',  type=str, help="pass True to save data by trial")
