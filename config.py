@@ -6,7 +6,7 @@ class Config():
         # 'seed' # Seed for the np random number generator
         self.args_dict = args_dict
         #enviroment parameters:
-        self.plotFigs = False
+        self.plotFigs = True
         self.debug = False
         self.saveData = False        # self.figure_format =  'EPS'
         # self.figure_format =  'PDF'
@@ -21,8 +21,9 @@ class Config():
         #Experiment parameters:
         self.Ntasks = 2                     # Ambiguous variable name, replacing with appropriate ones below:  # number of contexts 
         self.Ncontexts = 2                  # number of contexts (match block or non-match block)
-        self.Nblocks = 10                   # number of blocks for the simulation
-        self.trials_per_block = 500
+        self.trials_per_block = None #500
+        self.variable_trials_per_block = [500, 500, 800, 600, 800, 600, 800, 600, 600, 800, 800, 600]
+        #self.variable_trials_per_block = [500, 500, 400, 300, 400, 300, 400, 300, 300, 400, 400, 300]
         self.tau = 0.02
         self.dt = 0.001
         self.tsteps = 200                   # number of timesteps in a trial
@@ -30,13 +31,10 @@ class Config():
         self.response_delay = 0             # time between cue end and begin response, if 0 all trial is averaged for response
         self.noiseSD = 1e-3
         self.learning_rate = 5e-6  # too high a learning rate makes the output weights change too much within a trial / training cycle,
-        # self.block_schedule = ['90', '10', '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
-        self.block_schedule = ['90', '10', '90', '10', '90', '30', '70', '10', '50', '10'] + ['90', '10']*10
-        #['90', '10', '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
-        self.ofc_control_schedule= ['off'] *12  + ['match', 'non-match'] *1 + ['on'] *40
-
-        # self.block_schedule = ['90', '10'] * 10 #, '90', '10', '90', '30', '90', '50', '90', '10', '70', '10']
-        # self.ofc_control_schedule= ['on'] *40  + ['match', 'non-match'] *1 + ['on'] *40
+        self.Nblocks = 10                   # number of blocks for the simulation
+       	#self.block_schedule = ['10', '90'] * 1 #['30', '90', '10', '90', '70', '30', '10', '70'] 
+        self.block_schedule = ['90', '10', '90', '30', '50', '70', '10', '50', '90', '30', '70', '10']
+        self.ofc_control_schedule = ['off'] * 14  # ['on'] *40  + ['match', 'non-match'] *1 + ['on'] *40
                   
         #Network architecture
         self.use_neural_q_values = False
@@ -75,7 +73,7 @@ class Config():
         self.ofc_to_md_active = True
         self.ofc_to_PFC_active = False
         self.ofc_effect = 0.0  # magnitude of input from oFC toone MD neuron and inhibition to the other. 
-        self.ofc_effect_magnitude = 1.0
+        self.ofc_effect_magnitude = 0.0
         self.ofc_effect_momentum = 0.9
         self.positiveRates = True           # whether to clip rates to be only positive, G must also change
 

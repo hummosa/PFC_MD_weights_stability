@@ -70,7 +70,13 @@ def plot_rates(pfcmd, rates, config):
     pltu.beautify_plot(ax,x0min=False,y0min=False, yticks=yticks, xticks=xticks)
     pltu.axes_labels(ax,'','mean FR')
     ax.set_title('MD 0')
-    for ib in range(1, config.Nblocks,2):
+    if (len(config.variable_trials_per_block) > 0):
+        for ib in range(len(config.variable_trials_per_block)-1):
+            xmin = config.variable_trials_per_block[ib]
+            xmax = config.variable_trials_per_block[ib+1]
+            ax.axvspan(xmin, xmax, alpha=0.1, color='grey')
+    else:
+        for ib in range(1, config.Nblocks,2):
             ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
 
     ax = axes[1,1]
@@ -84,7 +90,13 @@ def plot_rates(pfcmd, rates, config):
     pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
     pltu.axes_labels(ax,'','')
     ax.set_title('MD avg inputs')
-    for ib in range(1, config.Nblocks,2):
+    if (len(config.variable_trials_per_block) > 0):
+        for ib in range(len(config.variable_trials_per_block)-1):
+            xmin = config.variable_trials_per_block[ib]
+            xmax = config.variable_trials_per_block[ib+1]
+            ax.axvspan(xmin, xmax, alpha=0.1, color='grey')
+    else:
+        for ib in range(1, config.Nblocks,2):
             ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
     
     # ax = axes[2,0]
@@ -138,6 +150,8 @@ def plot_rates(pfcmd, rates, config):
     stages = 4
     no_trials_to_score = 100
 
+    if len(config.variable_trials_per_block) > 0:
+	    tpb = 10 # NOTE: This is a hack just to get the code to run with variable
     pfcmd.score =  [np.mean(Corrects[istage*tpb:(istage*tpb)+no_trials_to_score])* 100. for istage in range(1, stages+1)]  # score binnged into stages
     pfcmd.score.append(np.mean(pfcmd.score[:-1]))   # The avrg of the cognitive flex measures, except the last forced switch block.
     pfcmd.score.append(np.mean(Corrects) * 100. )   # Add a var that holds the score of the model. % correct response. Later to be outputed as a text file.
@@ -216,6 +230,8 @@ def plot_rates(pfcmd, rates, config):
     
     # fig.savefig('./results/switch_signal.png')
 
+    return # NOTE: Sabrina trying to hack
+
     pfcmd.figRates
     pfcmd.figRates.tight_layout()
 
@@ -291,9 +307,15 @@ def plot_weights(pfcmd, weights, config):
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to Out-0 & 1 (r,b)')
         ax.set_title(PFC)
-        
-        for ib in range(1, config.Nblocks,2):
-            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
+
+        if (len(config.variable_trials_per_block) > 0):
+            for ib in range(len(config.variable_trials_per_block)-1):
+                xmin = config.variable_trials_per_block[ib]
+                xmax = config.variable_trials_per_block[ib+1]
+                ax.axvspan(xmin, xmax, alpha=0.1, color='grey')
+        else:
+            for ib in range(1, config.Nblocks,2):
+                ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
 
     for pi, PFC in enumerate(subplot_titles):
         ax = axes[1,pi]
@@ -307,16 +329,29 @@ def plot_weights(pfcmd, weights, config):
 
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','to MD-0(r) 1(b)')
-        for ib in range(1, config.Nblocks,2):
-            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
+
+        if (len(config.variable_trials_per_block) > 0):
+            for ib in range(len(config.variable_trials_per_block)-1):
+                xmin = config.variable_trials_per_block[ib]
+                xmax = config.variable_trials_per_block[ib+1]
+                ax.axvspan(xmin, xmax, alpha=0.1, color='grey')
+        else:
+            for ib in range(1, config.Nblocks,2):
+                ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
 
         ax = axes[2,pi]
         ax.plot(wMD2PFCs[:,p*pi:p*pi+5, 0],'tab:red', linewidth= pltu.linewidth)
         ax.plot(wMD2PFCs[:,p*pi:p*pi+5, 1],'tab:blue', linewidth= pltu.linewidth)
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         if pi == 0: pltu.axes_labels(ax,'','from MD-0(r) 1(b)')
-        for ib in range(1, config.Nblocks,2):
-            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
+        if (len(config.variable_trials_per_block) > 0):
+            for ib in range(len(config.variable_trials_per_block)-1):
+                xmin = config.variable_trials_per_block[ib]
+                xmax = config.variable_trials_per_block[ib+1]
+                ax.axvspan(xmin, xmax, alpha=0.1, color='grey')
+        else:
+            for ib in range(1, config.Nblocks,2):
+                ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
 
         # plot PFC to MD pre Traces
         ax = axes[3,pi]
@@ -324,8 +359,14 @@ def plot_weights(pfcmd, weights, config):
         ax.plot(config.MDlearningBiasFactor*np.mean(MDpreTraces, axis=1), '-.', linewidth = 2)
         pltu.beautify_plot(ax,x0min=False,y0min=False, xticks=xticks)
         pltu.axes_labels(ax,'Trials','pre')
-        for ib in range(1, config.Nblocks,2):
-            ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
+        if (len(config.variable_trials_per_block) > 0):
+            for ib in range(len(config.variable_trials_per_block)-1):
+                xmin = config.variable_trials_per_block[ib]
+                xmax = config.variable_trials_per_block[ib+1]
+                ax.axvspan(xmin, xmax, alpha=0.1, color='grey')
+        else:
+            for ib in range(1, config.Nblocks,2):
+                ax.axvspan(tpb* ib, tpb*(ib+1), alpha=0.1, color='grey')
     
     ax = axes [4,pi]
     # ax.hist(1.+wMD2PFCMults[:,p*pi:p*pi+p, 0].flatten(), alpha=0.7 )#, 'tab:blue') # take a slice from context 1 #[traini, tstep, Nneur] 
