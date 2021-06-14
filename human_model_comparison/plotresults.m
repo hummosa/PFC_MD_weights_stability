@@ -11,7 +11,7 @@ for idx=1:numel(subjs)
     Y(idx,:) = abs(y - 1);
 end
 
-model = load('seed100_vshuman_varblocks.mat');
+model = load('seed0_vshuman_varblocks.mat');
 P = model.performance(1001:4500);
 
 %% Plot 0 style
@@ -45,6 +45,9 @@ title('Window size = 10');
 
 %% Plot 1b style
 
+Pall = model.performance;
+Pall_m = movmean(Pall,[100 0]);
+
 figure;
 hold on;
 t = tiledlayout(1,1);
@@ -59,7 +62,7 @@ dg_plotShadeCL(ax1, [1:N_TRIALS; X - S; X + S; X]', 'Color', 'b', 'LineWidth', 2
 xlabel('Trial #')
 ylabel('Average performance -- Human');
 ax2 = axes(t);
-plot(ax2,movmean(P,[100 0]),'r')
+plot(ax2,Pall_m(1001:4500),'r')
 ax2.XAxisLocation = 'top';
 ax2.YAxisLocation = 'right';
 ax2.Color = 'none';
@@ -150,6 +153,17 @@ title("Human performance")
 subplot(1,2,2);
 plotbars({m90, m70, m50, m30, m10}, ["90%", "70%", "50%", "30%", "10%"], COLORS);
 title("Model performance")
+
+p90 = ranksum(h90, m90);
+fprintf("90 p-val=%0.5f \n", p90);
+p70 = ranksum(h70, m70);
+fprintf("70 p-val=%0.5f \n", p70);
+p50 = ranksum(h50, m50);
+fprintf("50 p-val=%0.5f \n", p50);
+p30 = ranksum(h30, m30);
+fprintf("30 p-val=%0.5f \n", p30);
+p10 = ranksum(h10, m10);
+fprintf("10 p-val=%0.5f \n", p10);
 
 %% Performance
 Ym = movmean(mean(Y,1,'omitnan'),15);
