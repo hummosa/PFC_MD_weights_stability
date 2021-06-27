@@ -14,7 +14,7 @@ fig_defaults = 'paper'                                  # paper figure defaults
 
 if fig_defaults == 'paper':
     ####### paper figure defaults
-    label_fontsize = 8 # pt
+    label_fontsize = 10 # pt
     plot_linewidth = 0.5 # pt
     linewidth = 0.5
     axes_linewidth = 0.5
@@ -120,10 +120,12 @@ def beautify_plot(ax,x0min=True,y0min=True,
     ymin, ymax = ax.get_yaxis().get_view_interval()
     if x0min: xmin=0
     if y0min: ymin=0
-    if xticks is None: ax.set_xticks([xmin,xmax])
-    else: ax.set_xticks(xticks)
-    if yticks is None: ax.set_yticks([ymin,0,ymax])
-    else: ax.set_yticks(yticks)
+    if xticks is not None: 
+    # if xticks is None: ax.set_xticks([xmin,xmax])
+        ax.set_xticks(xticks)
+    # if yticks is None: ax.set_yticks([ymin,0,ymax])
+    if yticks is not None: 
+        ax.set_yticks(yticks)
     ### do not set width and color of axes by below method
     ### axhline and axvline are not influenced by spine below.
     #ax.axhline(linewidth=axes_linewidth, color="k")
